@@ -95,7 +95,7 @@ class Network:
         elif isp == "cm":
             self.account = f"{self._parent._usercode}@cmcc"
         else:
-            self.account = f"L1L{self._parent._usercode}"
+            self.account = f"{self._parent._usercode}"
 
         # 创建带有本地IP的异步客户端
         if interface is None:
