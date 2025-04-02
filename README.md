@@ -62,6 +62,7 @@ print(me.Network.get_online_devices().dump_json())
 ## 致谢
 
 - [ZZU-API](https://github.com/TorCroft/ZZU-API) 提供了部分接口的参考 ~~(其实是我懒得抓包)~~
+- [Share ZZU WLAN](https://github.com/zidou-kiyn/share_zzu_wlan) 提供了新的校园网 Portal 认证相关代码
 
 ## 许可
 

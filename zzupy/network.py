@@ -12,7 +12,7 @@ from zzupy.utils import (
     get_ip_by_interface,
     sync_wrapper,
     get_local_ip,
-    get_interface_by_ip,
+    get_interface_by_ip, get_key, enc_pwd,
 )
 from zzupy.models import OnlineDevices
 
@@ -95,7 +95,7 @@ class Network:
         elif isp == "cm":
             self.account = f"{self._parent._usercode}@cmcc"
         else:
-            self.account = self._parent._usercode
+            self.account = f"L1L{self._parent._usercode}"
 
         # 创建带有本地IP的异步客户端
         if interface is None:
@@ -107,8 +107,6 @@ class Network:
             interface = get_interface_by_ip(local_ip)
             transport = httpx.AsyncHTTPTransport(local_address=local_ip)
         async with httpx.AsyncClient(transport=transport) as local_client:
-            await self._chkstatus_async(local_client, authurl, ua)
-            await self._loadConfig_async(local_client, interface, authurl, ua)
             return await self._auth_async(local_client, interface, authurl, ua)
 
     async def _auth_async(
@@ -127,6 +125,8 @@ class Network:
         :param ua: User-Agent
         :return: 认证结果元组
         """
+        ip = get_ip_by_interface(interface)
+        key = get_key(ip)
         headers = {
             **self._default_headers,
             "Accept": "*/*",
@@ -135,21 +135,22 @@ class Network:
         }
 
         params = [
-            ("callback", "dr1003"),
-            ("login_method", "1"),
-            ("user_account", f",0,{self.account}"),
+            ("callback", enc_pwd("dr1003", key)),
+            ("login_method", enc_pwd("1", key)),
+            ("user_account", enc_pwd(f",0,{self.account}", key)),
             (
                 "user_password",
                 base64.b64encode(self._parent._password.encode()).decode(),
             ),
-            ("wlan_user_ip", get_ip_by_interface(interface)),
+            ("wlan_user_ip", enc_pwd(ip, key)),
             ("wlan_user_ipv6", ""),
-            ("wlan_user_mac", "000000000000"),
+            ("wlan_user_mac", enc_pwd("000000000000", key)),
             ("wlan_ac_ip", ""),
             ("wlan_ac_name", ""),
-            ("jsVersion", "4.2.1"),
-            ("terminal_type", "1"),
-            ("lang", "zh-cn"),
+            ("jsVersion", enc_pwd("4.2.1", key)),
+            ("terminal_type", enc_pwd("1", key)),
+            ("lang", enc_pwd("zh-cn", key)),
+            ("encrypt", "1"),
             ("v", str(random.randint(500, 10499))),
             ("lang", "zh"),
         ]
@@ -164,85 +165,6 @@ class Network:
         except Exception as e:
             return interface, False, f"认证请求失败: {str(e)}"
 
-    async def _chkstatus_async(
-        self, client: httpx.AsyncClient, baseURL: str, ua: str
-    ) -> None:
-        """
-        异步检查状态
-
-        :param client: httpx异步客户端
-        :param baseURL: 认证服务器基础URL
-        :param ua: User-Agent
-        """
-        headers = {
-            **self._default_headers,
-            "Accept": "*/*",
-            "Referer": "http://10.2.7.8/a79.htm",
-            "User-Agent": ua,
-        }
-
-        params = {
-            "callback": "dr1002",
-            "jsVersion": "4.X",
-            "v": str(random.randint(500, 10499)),
-            "lang": "zh",
-        }
-
-        try:
-            await client.get(
-                re.sub(r":\d+", "", baseURL) + "/drcom/chkstatus",
-                params=params,
-                headers=headers,
-            )
-        except Exception:
-            # 忽略错误，因为这个请求可能不是必需的
-            pass
-
-    async def _loadConfig_async(
-        self, client: httpx.AsyncClient, interface: str, baseURL: str, ua: str
-    ) -> None:
-        """
-        异步加载配置
-
-        :param client: httpx异步客户端
-        :param interface: 网络接口
-        :param baseURL: 认证服务器基础URL
-        :param ua: User-Agent
-        """
-        headers = {
-            **self._default_headers,
-            "Accept": "*/*",
-            "Referer": "http://10.2.7.8/",
-            "User-Agent": ua,
-        }
-
-        params = {
-            "callback": "dr1001",
-            "program_index": "",
-            "wlan_vlan_id": "1",
-            "wlan_user_ip": base64.b64encode(
-                get_ip_by_interface(interface).encode()
-            ).decode(),
-            "wlan_user_ipv6": "",
-            "wlan_user_ssid": "",
-            "wlan_user_areaid": "",
-            "wlan_ac_ip": "",
-            "wlan_ap_mac": "000000000000",
-            "gw_id": "000000000000",
-            "jsVersion": "4.X",
-            "v": str(random.randint(500, 10499)),
-            "lang": "zh",
-        }
-
-        try:
-            await client.get(
-                f"{baseURL}/eportal/portal/page/loadConfig",
-                params=params,
-                headers=headers,
-            )
-        except Exception:
-            # 忽略错误，因为这个请求可能不是必需的
-            pass
 
     def login(self, loginurl: str = "http://10.2.7.16:8080", ua: str = None) -> bool:
         """
