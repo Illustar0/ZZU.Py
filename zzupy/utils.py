@@ -1,7 +1,6 @@
 import asyncio
 import hashlib
-import socket
-import psutil
+import ifaddr
 import gmalg
 from functools import wraps
 from Crypto.Util.Padding import unpad
@@ -44,11 +43,13 @@ def get_ip_by_interface(interface):
     :param interface: 网卡名称
     :return: 给定王卡的 IP 地址
     """
-    addresses = psutil.net_if_addrs()
-    if interface in addresses:
-        for addr in addresses[interface]:
-            if addr.family == socket.AF_INET:
-                return addr.address
+    adapters = ifaddr.get_adapters()
+    for adapter in adapters:
+        if adapter.name == interface:
+            for ip in adapter.ips:
+                # 只返回IPv4地址
+                if isinstance(ip.ip, str):
+                    return ip.ip
     return None
 
 
