@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import socket
 import ifaddr
 import gmalg
 from functools import wraps
@@ -109,3 +110,34 @@ def sync_wrapper(async_func):
                 loop.close()
 
     return wrapper
+
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("119.29.29.29", 80))
+        local_ip = s.getsockname()[0]
+        return local_ip
+    except Exception:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+def get_interface_by_ip(target_ip):
+    adapters = ifaddr.get_adapters()
+    for adapter in adapters:
+        for ip in adapter.ips:
+            if ip.is_IPv4:
+                if ip.ip == target_ip:
+                    return adapter.name
+            else:
+                if isinstance(ip.ip, str):
+                    ip_addr = ip.ip.split("%")[0] if "%" in ip.ip else ip.ip
+                    if ip_addr == target_ip:
+                        return adapter.name
+                elif isinstance(ip.ip, tuple):
+                    ip_addr = ip.ip[0] if len(ip.ip) > 0 else None
+                    if ip_addr == target_ip:
+                        return adapter.name
+    return None

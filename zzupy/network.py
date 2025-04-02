@@ -8,7 +8,12 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 from typing import List, Tuple
 
-from zzupy.utils import get_ip_by_interface, get_default_interface, sync_wrapper
+from zzupy.utils import (
+    get_ip_by_interface,
+    sync_wrapper,
+    get_local_ip,
+    get_interface_by_ip,
+)
 from zzupy.models import OnlineDevices
 
 
@@ -35,7 +40,7 @@ class Network:
 
     def portal_auth(
         self,
-        interface: str = get_default_interface(),
+        interface: str = None,
         authurl: str = "http://10.2.7.8:801",
         ua: str = None,
         isp: str = "campus",
@@ -58,7 +63,7 @@ class Network:
 
     async def portal_auth_async(
         self,
-        interface: str = get_default_interface(),
+        interface: str = None,
         authurl: str = "http://10.2.7.8:801",
         ua: str = None,
         isp: str = "campus",
@@ -93,9 +98,14 @@ class Network:
             self.account = self._parent._usercode
 
         # 创建带有本地IP的异步客户端
-        transport = httpx.AsyncHTTPTransport(
-            local_address=get_ip_by_interface(interface)
-        )
+        if interface is None:
+            transport = httpx.AsyncHTTPTransport(
+                local_address=get_ip_by_interface(interface)
+            )
+        else:
+            local_ip = get_local_ip()
+            interface = get_interface_by_ip(local_ip)
+            transport = httpx.AsyncHTTPTransport(local_address=local_ip)
         async with httpx.AsyncClient(transport=transport) as local_client:
             await self._chkstatus_async(local_client, authurl, ua)
             await self._loadConfig_async(local_client, interface, authurl, ua)
