@@ -140,7 +140,7 @@ class Network:
             ("user_account", enc_pwd(f",0,{self.account}", key)),
             (
                 "user_password",
-                base64.b64encode(self._parent._password.encode()).decode(),
+                enc_pwd(base64.b64encode(self._parent._password.encode()).decode(), key),
             ),
             ("wlan_user_ip", enc_pwd(ip, key)),
             ("wlan_user_ipv6", ""),
