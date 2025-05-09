@@ -1,8 +1,8 @@
-from .api import ZZUPy
-from .log import logger, configure_logging
 from loguru import logger
 
-logger.remove()
+from .api import ZZUPy
+
+logger.disable(__name__)
 
 __version__ = "4.1.0"
-__all__ = ["ZZUPy", "logger", "configure_logging"]
+__all__ = ["ZZUPy"]

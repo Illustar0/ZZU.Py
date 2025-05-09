@@ -33,7 +33,7 @@ extensions = [
 ]
 
 templates_path = ["_templates"]
-exclude_patterns = ["log.py", "log.rst"]
+exclude_patterns = ["log.rst"]
 
 language = "zh_cn"
 
