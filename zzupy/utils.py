@@ -1,9 +1,10 @@
 import asyncio
 import hashlib
 import socket
-import ifaddr
-import gmalg
 from functools import wraps
+
+import gmalg
+import ifaddr
 from Crypto.Util.Padding import unpad
 
 
@@ -142,14 +143,16 @@ def get_interface_by_ip(target_ip):
                         return adapter.name
     return None
 
+
 # 以下代码来自 https://github.com/zidou-kiyn/share_zzu_wlan
 # 窝就是 Ctrl + CV 领域大神，哈哈
-def get_key(ip: str = '') -> int:
+def get_key(ip: str = "") -> int:
     """计算输入字符串的异或密钥"""
     ret = 0
     for char in ip:
         ret ^= ord(char)
     return ret
+
 
 def enc_pwd(pass_in: str, key: int) -> str:
     """加密函数：将密码与密钥进行异或运算，并转为十六进制字符串"""
@@ -159,10 +162,11 @@ def enc_pwd(pass_in: str, key: int) -> str:
     pass_out = ""
     for char in pass_in:
         ch = ord(char) ^ key
-        hex_str = format(ch, '02x')
+        hex_str = format(ch, "02x")
         pass_out += hex_str
 
     return pass_out
+
 
 def dec_pwd(hex_string: str, key: int) -> str:
     """解密函数：将十六进制字符串解密回原始密码"""
@@ -171,7 +175,7 @@ def dec_pwd(hex_string: str, key: int) -> str:
 
     original_password = ""
     for i in range(0, len(hex_string), 2):
-        hex_pair = hex_string[i:i + 2]
+        hex_pair = hex_string[i : i + 2]
         decimal_value = int(hex_pair, 16)
         original_char = chr(decimal_value ^ key)
         original_password += original_char

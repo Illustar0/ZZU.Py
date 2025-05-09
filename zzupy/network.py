@@ -1,20 +1,23 @@
 import base64
-import random
-import time
-import httpx
-import re
 import json
-from fake_useragent import UserAgent
-from bs4 import BeautifulSoup
+import random
+import re
+import time
 from typing import List, Tuple
 
+import httpx
+from bs4 import BeautifulSoup
+from fake_useragent import UserAgent
+
+from zzupy.models import OnlineDevices
 from zzupy.utils import (
     get_ip_by_interface,
     sync_wrapper,
     get_local_ip,
-    get_interface_by_ip, get_key, enc_pwd,
+    get_interface_by_ip,
+    get_key,
+    enc_pwd,
 )
-from zzupy.models import OnlineDevices
 
 
 class Network:
@@ -140,7 +143,9 @@ class Network:
             ("user_account", enc_pwd(f",0,{self.account}", key)),
             (
                 "user_password",
-                enc_pwd(base64.b64encode(self._parent._password.encode()).decode(), key),
+                enc_pwd(
+                    base64.b64encode(self._parent._password.encode()).decode(), key
+                ),
             ),
             ("wlan_user_ip", enc_pwd(ip, key)),
             ("wlan_user_ipv6", ""),
@@ -164,7 +169,6 @@ class Network:
             return interface, success, res_json["msg"]
         except Exception as e:
             return interface, False, f"认证请求失败: {str(e)}"
-
 
     def login(self, loginurl: str = "http://10.2.7.16:8080", ua: str = None) -> bool:
         """

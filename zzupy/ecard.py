@@ -3,10 +3,11 @@ import json
 import threading
 import time
 import warnings
-import gmalg
 from urllib.parse import urlparse, parse_qs
-from typing_extensions import Tuple
+
+import gmalg
 from loguru import logger
+from typing_extensions import Tuple
 
 from zzupy.exception import DefaultRoomException, ECardTokenException
 from zzupy.utils import sm4_decrypt_ecb, check_permission, sync_wrapper

@@ -3,11 +3,12 @@ import datetime
 import json
 import random
 import time
+
 import httpx
 from loguru import logger
 
-from zzupy.utils import get_sign, sync_wrapper
 from zzupy.models import Courses, RoomOccupancyData, SemesterData
+from zzupy.utils import get_sign, sync_wrapper
 
 
 class Supwisdom:
