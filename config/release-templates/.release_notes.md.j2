@@ -103,7 +103,7 @@ _This release is published under the MIT License._
 {{
   "- %s" | format(
     format_link(
-      repo_name | create_pypi_url(release.version | string),
+      "https://pypi.org/project/zzupy/" ~ release.version | string,
       "PyPi Registry",
     )
   )
