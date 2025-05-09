@@ -1,6 +1,6 @@
 [project]
 name = "zzupy"
-version = "4.1.0"
+version = "5.0.0"
 description = "郑州大学移动校园的 Python API 封装 / An API wrapper for Zhengzhou University Mobile Campus written in Python."
 authors = [{ name = "Illustar0", email = "me@illustar0.com" }]
 requires-python = "~=3.8"

@@ -4,5 +4,5 @@ from .api import ZZUPy
 
 logger.disable(__name__)
 
-__version__ = "4.1.0"
+__version__ = "5.0.0"
 __all__ = ["ZZUPy"]
