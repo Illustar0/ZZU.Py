@@ -98,7 +98,7 @@ class Network:
             self.account = f"{self._parent._usercode}"
 
         # 创建带有本地IP的异步客户端
-        if interface is None:
+        if interface is not None:
             transport = httpx.AsyncHTTPTransport(
                 local_address=get_ip_by_interface(interface)
             )
