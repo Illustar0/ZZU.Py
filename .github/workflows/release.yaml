@@ -1,4 +1,4 @@
-name: Continuous Delivery
+name: Release
 
 on:
   workflow_dispatch:
