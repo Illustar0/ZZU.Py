@@ -15,6 +15,9 @@ from zzupy.models import DeviceParams, LoginResult
 from zzupy.network import Network
 from zzupy.supwisdom import Supwisdom
 from zzupy.utils import get_sign, _kget, sync_wrapper
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
 
 # 常量定义
 DEFAULT_APP_VERSION: Final = "SWSuperApp/1.0.39"
@@ -187,16 +190,40 @@ class ZZUPy:
     ) -> None:
         """执行密码登录流程"""
         headers = {
+            "User-Agent": "okhttp/3.12.1",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+        }
+        # 拿公钥
+        response = await self._client.get(
+            "https://cas.s.zzu.edu.cn/token/jwt/publicKey", headers=headers
+        )
+        response.raise_for_status()
+        public_key_text = response.text
+        public_key_pem = bytes(public_key_text, "utf-8")
+        public_key = serialization.load_pem_public_key(public_key_pem)
+        headers = {
             "User-Agent": f"{app_version}({self._DeviceParams.deviceName})",
             "Connection": "Keep-Alive",
             "Accept-Encoding": "gzip",
         }
-
+        encrypted_usercode = base64.b64encode(
+            public_key.encrypt(
+                self._usercode.encode("utf-8"),
+                padding.PKCS1v15()
+            )
+        ).decode("utf-8")
+        encrypted_password = base64.b64encode(
+            public_key.encrypt(
+                self._password.encode("utf-8"),
+                padding.PKCS1v15()
+            )
+        ).decode("utf-8")
         response = await self._client.post(
             "https://token.s.zzu.edu.cn/password/passwordLogin",
             params={
-                "username": self._usercode,
-                "password": self._password,
+                "username": f"__RSA__{encrypted_usercode}",
+                "password": f"__RSA__{encrypted_password}",
                 "appId": app_id,
                 "geo": "",
                 "deviceId": self._DeviceParams.deviceId,
