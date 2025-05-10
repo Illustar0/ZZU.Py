@@ -11,7 +11,7 @@ from typing_extensions import Unpack
 
 from zzupy.ecard import eCard
 from zzupy.exception import LoginException
-from zzupy.models import DeviceParams
+from zzupy.models import DeviceParams, LoginResult
 from zzupy.network import Network
 from zzupy.supwisdom import Supwisdom
 from zzupy.utils import get_sign, _kget, sync_wrapper
@@ -121,7 +121,7 @@ class ZZUPy:
         app_version: str = DEFAULT_APP_VERSION,
         app_id: str = DEFAULT_APP_ID,
         os_type: str = DEFAULT_OS_TYPE,
-    ) -> UserInfo:
+    ) -> LoginResult:
         """
         登录
 
@@ -142,7 +142,7 @@ class ZZUPy:
         app_version: str = DEFAULT_APP_VERSION,
         app_id: str = DEFAULT_APP_ID,
         os_type: str = DEFAULT_OS_TYPE,
-    ) -> UserInfo:
+    ) -> LoginResult:
         """
         登录
 
@@ -170,7 +170,17 @@ class ZZUPy:
         self._isLogged = True
         logger.info(f"账户 {self._usercode} 登录成功")
 
-        return {"usercode": self._usercode, "name": self._name}
+        return LoginResult(
+            success=True,
+            usercode=self._usercode,
+            name=self._name,
+            user_token=self._userToken,
+            dynamic_secret=self._dynamicSecret,
+            dynamic_token=self._dynamicToken,
+            refresh_token=self._refreshToken,
+            biz_type_id=self.Supwisdom.biz_type_id,
+            current_semester_id=self.Supwisdom.current_semester_id,
+        )
 
     async def _password_login(
         self, app_version: str, app_id: str, os_type: str

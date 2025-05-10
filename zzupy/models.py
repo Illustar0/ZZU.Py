@@ -23,6 +23,29 @@ class Room(BaseModel):
     """教室名称"""
 
 
+class LoginResult(BaseModel):
+    """登录结果模型"""
+
+    success: bool
+    """登录是否成功"""
+    usercode: str
+    """学号"""
+    name: str
+    """用户姓名"""
+    user_token: str
+    """用户 Token"""
+    refresh_token: str
+    """刷新 Token"""
+    dynamic_secret: str
+    """动态 Secret"""
+    dynamic_token: str
+    """动态 Token"""
+    biz_type_id: int
+    """业务类型 ID，区分本科生与研究生"""
+    current_semester_id: int
+    """当前学期 ID"""
+
+
 class Teacher(BaseModel):
     """教师信息模型"""
 
