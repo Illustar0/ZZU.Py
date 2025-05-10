@@ -55,6 +55,35 @@ def get_ip_by_interface(interface):
     return None
 
 
+def pkcs7_unpad(padded_data: bytes, block_size: int) -> bytes:
+    """
+    去除数据中的PKCS#7填充。
+
+    :param bytes padded_data: 带填充的数据
+    :param int block_size: 用于填充的块大小
+    :return: 去除填充后的数据
+    :rtype: bytes
+    :raises ValueError: 如果填充无效
+    """
+    if not padded_data or len(padded_data) % block_size != 0:
+        raise ValueError("无效的填充数据长度")
+
+    # 从最后一个字节获取填充长度
+    padding_len = padded_data[-1]
+
+    # 检查填充长度是否有效
+    if padding_len > block_size or padding_len == 0:
+        raise ValueError("无效的填充长度")
+
+    # 检查所有填充字节是否正确
+    for i in range(1, padding_len + 1):
+        if padded_data[-i] != padding_len:
+            raise ValueError("无效的填充")
+
+    # 返回去除填充后的数据
+    return padded_data[:-padding_len]
+
+
 def sm4_decrypt_ecb(ciphertext: bytes, key: bytes):
     """
     SM4 解密，ECB模式
@@ -70,7 +99,7 @@ def sm4_decrypt_ecb(ciphertext: bytes, key: bytes):
     for i in range(0, len(ciphertext), block_size):
         block = ciphertext[i : i + block_size]
         decrypted_padded += sm4.decrypt(block)
-    decrypted = unpad(decrypted_padded, block_size)
+    decrypted = pkcs7_unpad(decrypted_padded, block_size)
     return decrypted.decode()
 
 
