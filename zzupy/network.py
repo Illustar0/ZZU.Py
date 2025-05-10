@@ -160,15 +160,12 @@ class Network:
             ("lang", "zh"),
         ]
 
-        try:
-            response = await client.get(
-                f"{baseURL}/eportal/portal/login", params=params, headers=headers
-            )
-            res_json = json.loads(re.findall(r"dr1003\((.*?)\);", response.text)[0])
-            success = res_json["result"] != 0
-            return interface, success, res_json["msg"]
-        except Exception as e:
-            return interface, False, f"认证请求失败: {str(e)}"
+        response = await client.get(
+            f"{baseURL}/eportal/portal/login", params=params, headers=headers
+        )
+        res_json = json.loads(re.findall(r"dr1003\((.*?)\);", response.text)[0])
+        success = res_json["result"] != 0
+        return interface, success, res_json["msg"]
 
     def login(self, loginurl: str = "http://10.2.7.16:8080", ua: str = None) -> bool:
         """
