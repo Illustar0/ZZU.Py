@@ -135,9 +135,9 @@ class ZZUPy:
         :rtype: Tuple[str,str]
         :raises LoginException: 登录失败时抛出
         """
-        return sync_wrapper(self.login_sync)(app_version, app_id, os_type)
+        return sync_wrapper(self.login_async)(app_version, app_id, os_type)
 
-    async def login_sync(
+    async def login_async(
         self,
         app_version: str = DEFAULT_APP_VERSION,
         app_id: str = DEFAULT_APP_ID,
