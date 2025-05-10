@@ -5,7 +5,6 @@ from functools import wraps
 
 import gmalg
 import ifaddr
-from Crypto.Util.Padding import unpad
 
 
 def get_sign(dynamicSecret, params):
