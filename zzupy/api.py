@@ -19,7 +19,7 @@ from zzupy.supwisdom import Supwisdom
 from zzupy.utils import get_sign, _kget, sync_wrapper
 
 # 常量定义
-DEFAULT_APP_VERSION: Final = "SWSuperApp/1.0.39"
+DEFAULT_APP_VERSION: Final = "SWSuperApp/1.0.42"
 DEFAULT_APP_ID: Final = "com.supwisdom.zzu"
 DEFAULT_OS_TYPE: Final = "android"
 DEFAULT_DYNAMIC_SECRET: Final = "supwisdom_eams_app_secret"
