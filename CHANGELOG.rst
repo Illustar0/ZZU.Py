@@ -2,6 +2,55 @@
 
 <!-- version list -->
 
+.. _changelog-v5.1.0:
+
+v5.1.0 (2025-05-22)
+===================
+
+✨ Features
+-----------
+
+* Implement RSA encryption for login credentials (`30d8836`_)
+
+* Update default app version to 1.0.42 (`f18264f`_)
+
+* Update login return type to LoginResult (`8be5926`_)
+
+♻️ Refactoring
+---------------
+
+* Add pkcs7_unpad function and integrate into sm4_decrypt_ecb (`a1fbe7b`_)
+
+* Improve imports organization (`5c7a80e`_)
+
+* Remove unnecessary exception handling in network login request (`ecf9dad`_)
+
+* Replace login_sync with login_async in API (`8d46b47`_)
+
+🤖 Continuous Integration
+-------------------------
+
+* Rename Continuous Delivery to Release (`74a0753`_)
+
+🧹 Chores
+---------
+
+* Correct PyPI URL in release notes template (`ffd6969`_)
+
+* Remove CHANGELOG.md (`f46a875`_)
+
+.. _30d8836: https://github.com/Illustar0/ZZU.Py/commit/30d88364d7cff8ccbbb2ab08474c7f4b57d2e4a9
+.. _5c7a80e: https://github.com/Illustar0/ZZU.Py/commit/5c7a80ef58b0b9279a4629967a039cf6998ada8c
+.. _74a0753: https://github.com/Illustar0/ZZU.Py/commit/74a075370277c946aba9152fee55a8616f6fafcd
+.. _8be5926: https://github.com/Illustar0/ZZU.Py/commit/8be5926df0ce33206e75876b8c9e02a347de8292
+.. _8d46b47: https://github.com/Illustar0/ZZU.Py/commit/8d46b47c601c9f153b041bd96fbdff4c77781e26
+.. _a1fbe7b: https://github.com/Illustar0/ZZU.Py/commit/a1fbe7bf6056c94d4f375dcc223e1b79c4a28b2d
+.. _ecf9dad: https://github.com/Illustar0/ZZU.Py/commit/ecf9dadba910e7cbabe3c11406f8a4cb579966ce
+.. _f18264f: https://github.com/Illustar0/ZZU.Py/commit/f18264fd7cf0a294014289d439e561c9067bb903
+.. _f46a875: https://github.com/Illustar0/ZZU.Py/commit/f46a87582f070e8d38ce049c0a9b11409018c18a
+.. _ffd6969: https://github.com/Illustar0/ZZU.Py/commit/ffd6969e7f48f29e803a9bebfbe9a8f0571993a4
+
+
 .. _changelog-v5.0.0:
 
 v5.0.0 (2025-05-09)
