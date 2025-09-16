@@ -181,3 +181,31 @@ def dec_pwd(hex_string: str, key: int) -> str:
         original_password += original_char
 
     return original_password
+
+
+class JsonPParser:
+    """JsonP 格式数据解析器"""
+
+    _pattern = re.compile(r"^\s*(\w+)\((.*)\);?\s*$")
+
+    def __init__(self, text: str):
+        self.text = text
+        self._callback = None
+        self._data = None
+        self._parse()
+
+    def _parse(self):
+        match = self._pattern.match(self.text)
+        if not match:
+            raise ValueError("Invalid text format.")
+
+        self._callback = match.group(1)
+        self._data = match.group(2)
+
+    @property
+    def callback(self) -> str:
+        return self._callback
+
+    @property
+    def data(self) -> str:
+        return self._data
