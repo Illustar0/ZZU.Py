@@ -144,43 +144,63 @@ def get_interface_by_ip(target_ip):
     return None
 
 
-# 以下代码来自 https://github.com/zidou-kiyn/share_zzu_wlan
-# 窝就是 Ctrl + CV 领域大神，哈哈
-def get_key(ip: str = "") -> int:
-    """计算输入字符串的异或密钥"""
-    ret = 0
-    for char in ip:
-        ret ^= ord(char)
-    return ret
+class XorCipher:
+    """
+    一个使用异或 (XOR) 算法进行简单加密和解密的类。
+    """
 
+    def __init__(self, key_string: str = ""):
+        self._key: int = self._generate_key(key_string)
 
-def enc_pwd(pass_in: str, key: int) -> str:
-    """加密函数：将密码与密钥进行异或运算，并转为十六进制字符串"""
-    if len(pass_in) > 512:
-        return "-1"
+    @staticmethod
+    def _generate_key(s: str) -> int:
+        """
+        根据输入字符串计算异或密钥。
+        """
+        ret = 0
+        for char in s:
+            ret ^= ord(char)
+        return ret
 
-    pass_out = ""
-    for char in pass_in:
-        ch = ord(char) ^ key
-        hex_str = format(ch, "02x")
-        pass_out += hex_str
+    @property
+    def key(self) -> int:
+        return self._key
 
-    return pass_out
+    def encrypt(self, string: str) -> str:
+        """
+        将明文与实例密钥进行异或运算，并转为十六进制字符串。
+        :param string: 明文
+        """
+        if len(string) > 512:
+            return "-1"
 
+        encrypted_output = []
+        for char in string:
+            ch = ord(char) ^ self._key
+            hex_str = format(ch, "02x")
+            encrypted_output.append(hex_str)
 
-def dec_pwd(hex_string: str, key: int) -> str:
-    """解密函数：将十六进制字符串解密回原始密码"""
-    if len(hex_string) % 2 != 0:
-        return "错误：十六进制字符串长度必须为偶数"
+        return "".join(encrypted_output)
 
-    original_password = ""
-    for i in range(0, len(hex_string), 2):
-        hex_pair = hex_string[i : i + 2]
-        decimal_value = int(hex_pair, 16)
-        original_char = chr(decimal_value ^ key)
-        original_password += original_char
+    def decrypt(self, hex_string: str) -> str:
+        """
+        将十六进制字符串解密回原始密码。
 
-    return original_password
+        :param hex_string: 十六进制字符串
+        :raise ValueError: 如果十六进制字符串格式错误
+        """
+        if len(hex_string) % 2 != 0:
+            raise ValueError("十六进制字符串长度必须为偶数")
+
+        original_password = []
+        for i in range(0, len(hex_string), 2):
+            hex_pair = hex_string[i : i + 2]
+            decimal_value = int(hex_pair, 16)
+            # 与实例密钥进行异或
+            original_char = chr(decimal_value ^ self._key)
+            original_password.append(original_char)
+
+        return "".join(original_password)
 
 
 class JsonPParser:

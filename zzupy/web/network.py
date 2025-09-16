@@ -11,15 +11,12 @@ from zzupy.exception import LoginError, ParsingError, NetworkError, NotLoggedInE
 from zzupy.models import OnlineDevices, AuthResult
 from zzupy.utils import (
     get_local_ip,
-    get_key,
-    enc_pwd,
     JsonPParser,
+    XorCipher,
 )
 
 
 class EPortalClient:
-
-
     def __init__(
         self,
         base_url: str,
@@ -39,7 +36,7 @@ class EPortalClient:
             self._bind_address = get_local_ip()
         else:
             self._bind_address = bind_address
-        self._bind_address_key = get_key(self._bind_address)
+        self._xor_cipher = XorCipher(self._bind_address)
         if force_bind:
             try:
                 transport = httpx.HTTPTransport(local_address=bind_address)
@@ -77,26 +74,25 @@ class EPortalClient:
         """
         if encrypt:
             params = [
-                ("callback", enc_pwd("dr1003", self._bind_address_key)),
-                ("login_method", enc_pwd("1", self._bind_address_key)),
-                ("user_account", enc_pwd(f",0,{account}", self._bind_address_key)),
+                ("callback", self._xor_cipher.encrypt("dr1003")),
+                ("login_method", self._xor_cipher.encrypt("1")),
+                ("user_account", self._xor_cipher.encrypt(f",0,{account}")),
                 (
                     "user_password",
-                    enc_pwd(
+                    self._xor_cipher.encrypt(
                         base64.b64encode(password.encode()).decode(),
-                        self._bind_address_key,
                     ),
                 ),
-                ("wlan_user_ip", enc_pwd(self._bind_address, self._bind_address_key)),
+                ("wlan_user_ip", self._xor_cipher.encrypt(self._bind_address)),
                 ("wlan_user_ipv6", ""),
-                ("wlan_user_mac", enc_pwd("000000000000", self._bind_address_key)),
-                ("wlan_vlan_id", enc_pwd("0", self._bind_address_key)),
+                ("wlan_user_mac", self._xor_cipher.encrypt("000000000000")),
+                ("wlan_vlan_id", self._xor_cipher.encrypt("0")),
                 ("wlan_ac_ip", ""),
                 ("wlan_ac_name", ""),
                 ("authex_enable", ""),
-                ("jsVersion", enc_pwd("4.2.2", self._bind_address_key)),
-                ("terminal_type", enc_pwd("3", self._bind_address_key)),
-                ("lang", enc_pwd("zh-cn", self._bind_address_key)),
+                ("jsVersion", self._xor_cipher.encrypt("4.2.2")),
+                ("terminal_type", self._xor_cipher.encrypt("3")),
+                ("lang", self._xor_cipher.encrypt("zh-cn")),
                 ("encrypt", "1"),
                 ("v", str(random.randint(500, 10499))),
                 ("lang", "zh"),
