@@ -1,28 +1,34 @@
-class ZZUPyException(Exception):
-    """ZZUPy项目的基类异常"""
+class ZZUError(Exception):
+    """基类异常"""
 
     pass
 
 
-class LoginException(ZZUPyException):
-    """登录相关异常"""
+class NetworkError(ZZUError):
+    """网络出错"""
 
     pass
 
 
-class DefaultRoomException(ZZUPyException):
-    """默认房间相关异常"""
+class LoginError(ZZUError):
+    """登录失败"""
 
     pass
 
 
-class ECardTokenException(ZZUPyException):
-    """校园卡 Token 相关异常"""
+class ParsingError(ZZUError):
+    """数据解析失败"""
 
     pass
 
 
-class PermissionException(ZZUPyException):
-    """校园卡 Token 相关异常"""
+class NotLoggedInError(ZZUError):
+    """未登录"""
+
+    pass
+
+
+class AuthenticationError(ZZUError):
+    """认证失败"""
 
     pass
