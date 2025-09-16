@@ -1,7 +1,6 @@
-import asyncio
 import hashlib
+import re
 import socket
-from functools import wraps
 
 import gmalg
 import ifaddr
@@ -112,33 +111,6 @@ def check_permission(self):
         pass
     else:
         raise PermissionError("需要登录")
-
-
-def sync_wrapper(async_func):
-    """
-    将异步方法包装为同步方法的装饰器
-    """
-
-    @wraps(async_func)
-    def wrapper(*args, **kwargs):
-        try:
-            # 尝试获取当前事件循环
-            loop = asyncio.get_event_loop()
-            new_loop = False
-        except RuntimeError:
-            # 如果没有事件循环，创建一个新的
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            new_loop = True
-
-        try:
-            return loop.run_until_complete(async_func(*args, **kwargs))
-        finally:
-            # 只有当我们创建了新的事件循环时才关闭它
-            if new_loop:
-                loop.close()
-
-    return wrapper
 
 
 def get_local_ip():
