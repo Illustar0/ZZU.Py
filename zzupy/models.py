@@ -325,3 +325,17 @@ class SemesterData(BaseModel):
     def dump_json(self, indent: Optional[int] = None) -> str:
         """格式化为JSON字符串"""
         return json.dumps(self.model_dump(), ensure_ascii=False, indent=indent)
+
+
+class AuthResult(BaseModel):
+    """Portal 认证结果"""
+
+    result: int
+    """认证结果"""
+    message: str = Field(..., alias="msg")
+    """Portal 服务器返回信息"""
+    ret_code: int  # 不知道是个啥
+
+    @property
+    def success(self) -> bool:
+        return self.result == 1
