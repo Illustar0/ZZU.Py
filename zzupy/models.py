@@ -23,29 +23,6 @@ class Room(BaseModel):
     """教室名称"""
 
 
-class LoginResult(BaseModel):
-    """登录结果"""
-
-    success: bool
-    """登录是否成功"""
-    usercode: str
-    """学号"""
-    name: str
-    """用户姓名"""
-    user_token: str
-    """用户 Token"""
-    refresh_token: str
-    """刷新 Token"""
-    dynamic_secret: str
-    """动态 Secret"""
-    dynamic_token: str
-    """动态 Token"""
-    biz_type_id: int
-    """业务类型 ID，区分本科生与研究生"""
-    current_semester_id: int
-    """当前学期 ID"""
-
-
 class Teacher(BaseModel):
     """教师信息"""
 
@@ -92,58 +69,6 @@ class Course(BaseModel):
     def dump_json(self, indent: Optional[int] = None) -> str:
         """格式化为JSON字符串"""
         return json.dumps(self.model_dump(), ensure_ascii=False, indent=indent)
-
-
-class Courses(BaseModel):
-    """课程列表"""
-
-    courses: List[Course] = Field(default_factory=list, description="课程列表")
-
-    def __len__(self) -> int:
-        return len(self.courses)
-
-    def __getitem__(self, index):
-        return self.courses[index]
-
-    def __iter__(self):
-        return iter(self.courses)
-
-    @classmethod
-    def from_list(cls, courses_list: List[Dict[str, Any]]) -> "Courses":
-        """从课程列表创建Courses对象"""
-        return cls(courses=[Course(**course) for course in courses_list])
-
-    def dump_json(self, indent: Optional[int] = None) -> str:
-        """格式化为JSON字符串"""
-        return json.dumps(
-            [course.model_dump() for course in self.courses],
-            ensure_ascii=False,
-            indent=indent,
-        )
-
-    def group_by_date(self) -> Dict[str, List[Course]]:
-        """按日期分组课程"""
-        result = {}
-        for course in self.courses:
-            if course.date not in result:
-                result[course.date] = []
-            result[course.date].append(course)
-        return result
-
-
-class DeviceParams(BaseModel):
-    """设备参数"""
-
-    deviceName: str
-    """设备名称"""
-    deviceId: str
-    """设备ID"""
-    deviceInfo: str
-    """设备信息"""
-    deviceInfos: str
-    """设备详细信息"""
-    userAgentPrecursor: str
-    """用户代理前缀"""
 
 
 class OnlineDevice(BaseModel):
