@@ -228,25 +228,27 @@ class SupwisdomClient:
         """
         today_courses = self.get_today_courses(semester_id)
         current_time = datetime.datetime.now()
-        
+
         next_course = None
         next_start_time = None
-        
+
         for course in today_courses:
             if course is not None:
                 try:
                     course_start_time = datetime.datetime.strptime(
-                        f"{course.date} {course.start_time}", 
-                        "%Y-%m-%d %H:%M"
+                        f"{course.date} {course.start_time}", "%Y-%m-%d %H:%M"
                     )
-                    
+
                     if course_start_time > current_time:
-                        if next_start_time is None or course_start_time < next_start_time:
+                        if (
+                            next_start_time is None
+                            or course_start_time < next_start_time
+                        ):
                             next_course = course
                             next_start_time = course_start_time
                 except ValueError:
                     continue
-        
+
         return next_course
 
     def get_room_data(
@@ -353,7 +355,6 @@ class SupwisdomClient:
         except httpx.RequestError as exc:
             logger.error("获取学期数据网络请求失败: {}", exc)
             raise NetworkError("网络连接异常") from exc
-
 
     @property
     def biz_type_id(self) -> int:
