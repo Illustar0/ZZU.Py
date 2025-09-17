@@ -3,6 +3,7 @@ import json
 from typing import Final
 
 import httpx
+import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
@@ -24,6 +25,8 @@ class CASClient(ICASClient):
     PUBLIC_KEY_URL: Final = "https://cas.s.zzu.edu.cn/token/jwt/publicKey"
     LOGIN_URL: Final = "https://token.s.zzu.edu.cn/password/passwordLogin"
 
+    JWT_ALGORITHMS: Final = ["RS512"]
+
     def __init__(
         self,
         user_token: str | None = None,
@@ -37,6 +40,7 @@ class CASClient(ICASClient):
         self._client = httpx.Client()
         self._user_token: str | None = user_token
         self._refresh_token: str | None = refresh_token
+        self._public_key = self._get_public_key()
 
     def __enter__(self) -> "CASClient":
         return self
@@ -52,9 +56,39 @@ class CASClient(ICASClient):
     def refresh_token(self) -> str | None:
         return self._refresh_token
 
+    def _validate_jwt(self) -> bool:
+        if self._user_token is None or self._refresh_token is None:
+            logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
+            return False
+
+        try:
+            jwt.decode(
+                self._user_token, self._public_key, algorithms=self.JWT_ALGORITHMS
+            )
+        except jwt.ExpiredSignatureError:
+            logger.error("userToken 已过期，请使用账密登录并更新 userToken")
+            return False
+        except jwt.InvalidTokenError:
+            logger.error("userToken 无效，请使用账密登录并更新 userToken")
+            return False
+
+        try:
+            jwt.decode(
+                self._refresh_token, self._public_key, algorithms=self.JWT_ALGORITHMS
+            )
+        except jwt.ExpiredSignatureError:
+            logger.error("refreshToken 已过期，请使用账密登录并更新 refreshToken")
+            return False
+        except jwt.InvalidTokenError:
+            logger.error("refreshToken 无效，请使用账密登录并更新 refreshToken")
+            return False
+
+        logger.info("userToken 和 refreshToken 有效")
+        return True
+
     def _get_public_key(self) -> RSAPublicKey:
         """
-        从 CAS 服务器获取用于加密凭据的 RSA 公钥。
+        从 CAS 服务器获取 RSA 公钥。
         """
         logger.debug("正在从 {} 获取公钥...", self.PUBLIC_KEY_URL)
         headers = {"User-Agent": "okhttp/3.12.1"}
@@ -91,10 +125,12 @@ class CASClient(ICASClient):
         :raise PraisingError: 如果服务器响应无法解析
         :raise NetworkError: 如果出现网络错误
         """
-        public_key = self._get_public_key()
+        if self._validate_jwt():
+            logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
+            return
 
-        encrypted_account = self._encrypt_and_encode(account, public_key)
-        encrypted_password = self._encrypt_and_encode(password, public_key)
+        encrypted_account = self._encrypt_and_encode(account, self._public_key)
+        encrypted_password = self._encrypt_and_encode(password, self._public_key)
 
         headers = {"User-Agent": f"{self.APP_VERSION}()"}
         params = {
