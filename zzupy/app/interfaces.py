@@ -14,12 +14,12 @@ class ICASClient(ABC):
     def login(self, account: str, password: str) -> None:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def user_token(self) -> str | None:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def refresh_token(self) -> str | None:
         pass
