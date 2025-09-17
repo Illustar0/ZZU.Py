@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class Room(BaseModel):
-    """教室信息模型"""
+    """教室信息"""
 
     address: str
     """教室地址"""
@@ -24,7 +24,7 @@ class Room(BaseModel):
 
 
 class LoginResult(BaseModel):
-    """登录结果模型"""
+    """登录结果"""
 
     success: bool
     """登录是否成功"""
@@ -47,7 +47,7 @@ class LoginResult(BaseModel):
 
 
 class Teacher(BaseModel):
-    """教师信息模型"""
+    """教师信息"""
 
     code: str
     """教师代码"""
@@ -58,7 +58,7 @@ class Teacher(BaseModel):
 
 
 class Course(BaseModel):
-    """单个课程信息模型"""
+    """单个课程信息"""
 
     course_code: str
     """课程代码"""
@@ -95,7 +95,7 @@ class Course(BaseModel):
 
 
 class Courses(BaseModel):
-    """课程列表模型"""
+    """课程列表"""
 
     courses: List[Course] = Field(default_factory=list, description="课程列表")
 
@@ -132,7 +132,7 @@ class Courses(BaseModel):
 
 
 class DeviceParams(BaseModel):
-    """设备参数模型"""
+    """设备参数"""
 
     deviceName: str
     """设备名称"""
@@ -147,7 +147,7 @@ class DeviceParams(BaseModel):
 
 
 class OnlineDevice(BaseModel):
-    """在线设备信息模型"""
+    """在线设备信息"""
 
     brasid: str
     """BRAS ID"""
@@ -178,7 +178,7 @@ class OnlineDevice(BaseModel):
 
 
 class OnlineDevices(BaseModel):
-    """在线设备列表模型"""
+    """在线设备列表"""
 
     devices: List[OnlineDevice] = Field(
         default_factory=list, description="在线设备列表"
@@ -208,7 +208,7 @@ class OnlineDevices(BaseModel):
 
 
 class RoomOccupancy(BaseModel):
-    """教室占用信息模型"""
+    """教室占用信息"""
 
     building_code: str
     """建筑代码"""
@@ -235,7 +235,7 @@ class RoomOccupancy(BaseModel):
 
 
 class RoomOccupancyData(BaseModel):
-    """教室占用数据模型"""
+    """教室占用数据"""
 
     date: str
     """日期，格式为YYYY-MM-DD"""
@@ -281,7 +281,7 @@ class RoomOccupancyData(BaseModel):
 
 
 class Semester(BaseModel):
-    """学期模型"""
+    """学期"""
 
     code: str
     """学期号"""
@@ -306,7 +306,7 @@ class Semester(BaseModel):
 
 
 class SemesterData(BaseModel):
-    """学期数据模型"""
+    """学期数据"""
 
     cur_semester_id: int
     """默认学期ID"""
