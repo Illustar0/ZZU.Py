@@ -31,10 +31,6 @@ def get_sign(dynamic_secret: str, params: str) -> str:
     return sign
 
 
-def _kget(kwargs, key, default=None):
-    return kwargs[key] if key in kwargs else default
-
-
 def get_ip_by_interface(interface):
     """
     获取指定网卡的IP地址
