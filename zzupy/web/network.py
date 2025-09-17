@@ -43,7 +43,7 @@ class EPortalClient:
             except httpx.ConnectError:
                 transport = httpx.HTTPTransport()
         else:
-            transport = httpx.AsyncHTTPTransport(local_address=bind_address)
+            transport = httpx.HTTPTransport(local_address=bind_address)
         self._client = httpx.Client(
             transport=transport,
         )
