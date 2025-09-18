@@ -31,29 +31,26 @@ ZZU 的电费充值过程中对请求体进行了加密，这本没有问题，�
 Man, what can I say?  
 具体逻辑忘了，直接放 Python 实现吧
 ```Python
-def get_sign(dynamicSecret, params):
+def get_sign(dynamic_secret: str, params: str) -> str:
     """
     获取sign值
 
-    :param str dynamicSecret: login后自动获取，来自 login-token 请求
-    :param str params: URL请求参数
-    :return: sign值
+    :param str dynamic_secret: login 后自动获取，来自 login-token 请求
+    :param str params: URL 请求参数
+    :return: sign 值
     :rtype: str
     """
-    paramsDict = {}
-    for param in params.split("&"):
-        if param.split("=")[0] == "timestamp":
-            timestamp = param.split("=")[1]
-        elif param.split("=")[0] == "random":
-            random = param.split("=")[1]
-        else:
-            paramsDict[param.split("=")[0]] = param.split("=")[1]
-    paramsDict = dict(sorted(paramsDict.items()))
-    original = f"{dynamicSecret}|"
-    for key in paramsDict:
-        original += f"{paramsDict[key]}|"
-    original += f"{timestamp}|{random}"
-    sign = hashlib.md5(original.encode("utf-8")).hexdigest().upper()
+    parsed_params: Dict[str, str] = {k: v[0] for k, v in parse_qs(params).items()}
+
+    timestamp = parsed_params.pop("timestamp", "")
+    random = parsed_params.pop("random", "")
+
+    sorted_values = [v for k, v in sorted(parsed_params.items())]
+
+    parts_to_sign = [dynamic_secret] + sorted_values + [timestamp, random]
+    original_string = "|".join(parts_to_sign)
+
+    sign = hashlib.md5(original_string.encode("utf-8")).hexdigest().upper()
     return sign
 ```
 
