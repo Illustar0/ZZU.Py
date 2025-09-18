@@ -23,7 +23,7 @@ class CASClient(ICASClient):
     OS_TYPE: Final = "android"
 
     PUBLIC_KEY_URL: Final = "https://cas.s.zzu.edu.cn/token/jwt/publicKey"
-    LOGIN_URL: Final = "https://token.s.zzu.edu.cn/password/passwordLogin"
+    LOGIN_URL: Final = "https://cas.s.zzu.edu.cn/token/password/passwordLogin"
 
     JWT_ALGORITHMS: Final = ["RS512"]
 
