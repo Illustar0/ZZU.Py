@@ -96,18 +96,6 @@ def sm4_decrypt_ecb(ciphertext: bytes, key: bytes):
     return decrypted.decode()
 
 
-def check_permission(self):
-    """
-    检查用户是否登录
-
-    :param self:
-    """
-    if self.is_logged_in:
-        pass
-    else:
-        raise PermissionError("需要登录")
-
-
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
