@@ -1,21 +1,20 @@
 [project]
 name = "zzupy"
 version = "5.1.0"
-description = "郑州大学移动校园的 Python API 封装 / An API wrapper for Zhengzhou University Mobile Campus written in Python."
+description = "豫见郑大的 Python API 封装 / An API wrapper for Zhengzhou University Mobile Campus written in Python."
 authors = [{ name = "Illustar0", email = "me@illustar0.com" }]
-requires-python = "~=3.12"
+requires-python = "~=3.13.0"
 readme = "README.md"
 license = "MIT"
 dependencies = [
     "beautifulsoup4>=4.13.3",
-    "cryptography>=44.0.3",
-    "fake-useragent>=2.0.0",
+    "cryptography>=46.0.1",
     "gmalg>=1.0.6",
     "httpx>=0.28.1",
     "ifaddr>=0.2.0",
     "loguru>=0.7.3",
     "numpy>=2.3.3",
-    "pydantic>=2.10.6",
+    "pydantic>=2.11.9",
     "pyjwt>=2.10.1",
     "typing-extensions>=4.12.2",
 ]
