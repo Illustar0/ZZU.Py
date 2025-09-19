@@ -102,36 +102,6 @@ class OnlineDevice(BaseModel):
         return json.dumps(self.model_dump(), ensure_ascii=False, indent=indent)
 
 
-class OnlineDevices(BaseModel):
-    """在线设备列表"""
-
-    devices: List[OnlineDevice] = Field(
-        default_factory=list, description="在线设备列表"
-    )
-
-    def __len__(self) -> int:
-        return len(self.devices)
-
-    def __getitem__(self, index):
-        return self.devices[index]
-
-    def __iter__(self):
-        return iter(self.devices)
-
-    @classmethod
-    def from_list(cls, devices_list: List[Dict[str, Any]]) -> "OnlineDevices":
-        """从设备列表创建OnlineDevices对象"""
-        return cls(devices=[OnlineDevice(**device) for device in devices_list])
-
-    def dump_json(self, indent: Optional[int] = None) -> str:
-        """格式化为JSON字符串"""
-        return json.dumps(
-            [device.model_dump() for device in self.devices],
-            ensure_ascii=False,
-            indent=indent,
-        )
-
-
 class RoomOccupancy(BaseModel):
     """教室占用信息"""
 
