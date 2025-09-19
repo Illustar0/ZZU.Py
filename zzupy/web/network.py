@@ -2,13 +2,14 @@ import base64
 import json
 import random
 import time
+from typing import List
 
 import httpx
 from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
 from zzupy.exception import LoginError, ParsingError, NetworkError, NotLoggedInError
-from zzupy.models import OnlineDevices, AuthResult
+from zzupy.models import AuthResult, OnlineDevice
 from zzupy.utils import (
     get_local_ip,
     JsonPParser,
@@ -211,12 +212,12 @@ class SelfServiceSystem:
         except httpx.RequestError as e:
             raise NetworkError(f"发生网络错误: {e}") from e
 
-    def get_online_devices(self) -> OnlineDevices:
+    def get_online_devices(self) -> List[OnlineDevice]:
         """
         获取当前在线设备
 
         :return: 在线设备列表
-        :rtype: OnlineDevices
+        :rtype: List[OnlineDevice]
         :raise NotLoggedInError: 如果未登录。
         :raise ParsingError: 如果无法解析 API 返回数据。
         :raise NetworkError: 如果发生网络错误。
@@ -235,7 +236,8 @@ class SelfServiceSystem:
                 params=params,
             )
             response.raise_for_status()
-            return OnlineDevices.from_list(json.loads(response.text))
+            response_data = response.json()
+            return [OnlineDevice(**device) for device in response_data]
         except httpx.RequestError as e:
             raise NetworkError(f"发生网络错误: {e}") from e
         except json.JSONDecodeError as e:
