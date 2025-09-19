@@ -31,23 +31,6 @@ def get_sign(dynamic_secret: str, params: str) -> str:
     return sign
 
 
-def get_ip_by_interface(interface):
-    """
-    获取指定网卡的IP地址
-
-    :param interface: 网卡名称
-    :return: 给定王卡的 IP 地址
-    """
-    adapters = ifaddr.get_adapters()
-    for adapter in adapters:
-        if adapter.name == interface:
-            for ip in adapter.ips:
-                # 只返回IPv4地址
-                if isinstance(ip.ip, str):
-                    return ip.ip
-    return None
-
-
 def pkcs7_unpad(padded_data: bytes, block_size: int) -> bytes:
     """
     去除数据中的PKCS#7填充。
