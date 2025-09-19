@@ -34,8 +34,8 @@ class CASClient(ICASClient):
     ) -> None:
         """
         初始化认证服务。
-        :param user_token: userToken; 对豫在郑大 APP 抓包获取。
-        :param refresh_token: refreshToken; 对豫在郑大 APP 抓包获取。
+        :param user_token: userToken; 对豫见郑大 APP 抓包获取。
+        :param refresh_token: refreshToken; 对豫见郑大 APP 抓包获取。
         """
         self._client = httpx.Client()
         self._user_token: str | None = user_token

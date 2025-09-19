@@ -60,8 +60,8 @@ def get_sign(dynamic_secret: str, params: str) -> str:
 
 
 ### 统一认证
-众所周知豫在郑大 APP 端的统一认证使用的是标准的 JWT 方案。那么问题就来了，为什么使用 ZZU.Py 进行账密登录，手机上就会被踢下线呢？  
-关键在于 `https://cas.s.zzu.edu.cn/token/login/userOnlineDetect` 。豫在郑大 APP 端启动时会通过这个接口上报学号 、`deviceId` 和 `userToken`，并根据响应决定要不要让你重新登录。  
-也就是说，只要 Block 掉这个请求，手机上的豫在郑大 APP 就不会因为 ZZU.Py 进行账密登录而被踢下线了。  
+众所周知豫见郑大 APP 端的统一认证使用的是标准的 JWT 方案。那么问题就来了，为什么使用 ZZU.Py 进行账密登录，手机上就会被踢下线呢？  
+关键在于 `https://cas.s.zzu.edu.cn/token/login/userOnlineDetect` 。豫见郑大 APP 端启动时会通过这个接口上报学号 、`deviceId` 和 `userToken`，并根据响应决定要不要让你重新登录。  
+也就是说，只要 Block 掉这个请求，手机上的豫见郑大 APP 就不会因为 ZZU.Py 进行账密登录而被踢下线了。  
 本来还想反编译 apk 看看能不能改下...结果发现加了爱加密企业版，诗人？  
 写个 Xposed 模块，然后用 LSPatch 打包应该是个办法，可惜我不会 Java ，就留给有缘人实现吧
