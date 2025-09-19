@@ -171,7 +171,7 @@ class SelfServiceSystem:
         """
         try:
             response = self._client.get(
-                f"/Self/login/",
+                "/Self/login/",
                 follow_redirects=False,
             )
             response.raise_for_status()
@@ -187,7 +187,7 @@ class SelfServiceSystem:
 
             # 不能少
             self._client.get(
-                f"/Self/login/randomCode",
+                "/Self/login/randomCode",
                 params={"t": str(random.random())},
             )
 
@@ -231,7 +231,7 @@ class SelfServiceSystem:
         }
         try:
             response = self._client.get(
-                f"/Self/dashboard/getOnlineList",
+                "/Self/dashboard/getOnlineList",
                 params=params,
             )
             response.raise_for_status()
@@ -255,7 +255,7 @@ class SelfServiceSystem:
             "sessionid": session_id,
         }
         response = self._client.get(
-            f"/Self/dashboard/tooffline",
+            "/Self/dashboard/tooffline",
             params=params,
         )
         response.raise_for_status()
