@@ -32,3 +32,10 @@ class AuthenticationError(ZZUError):
     """认证失败"""
 
     pass
+
+
+class OperationError(ZZUError):
+    """操作失败"""
+
+    pass
+
