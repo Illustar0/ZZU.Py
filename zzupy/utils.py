@@ -84,16 +84,24 @@ def sm4_decrypt_ecb(ciphertext: bytes, key: bytes):
     return decrypted.decode()
 
 
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def get_local_ip(target: str = '8.8.8.8') -> str | None:
+    """
+    获取用于连接到特定目标IP的本地IP地址。
+
+    Args:
+        target: 目标主机名或IP地址。默认为 '8.8.8.8'。
+
+    Returns:
+        一个字符串，表示用于到达目标的本地IP地址。
+        如果发生网络错误（例如，网络不可达），则返回 None。
+    """
     try:
-        s.connect(("119.29.29.29", 80))
-        local_ip = s.getsockname()[0]
-        return local_ip
-    except Exception:
-        return "127.0.0.1"
-    finally:
-        s.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((target, 80))
+            local_ip = s.getsockname()[0]
+            return local_ip
+    except socket.error:
+        return None
 
 
 def get_interface_by_ip(target_ip):
