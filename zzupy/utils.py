@@ -1,11 +1,16 @@
+"""工具函数库"""
+
 import hashlib
 import re
 import socket
+from functools import wraps
 from typing import Dict
 from urllib.parse import parse_qs
 
 import gmalg
 import ifaddr
+
+from zzupy.exception import NotLoggedInError
 
 
 def get_sign(dynamic_secret: str, params: str) -> str:
@@ -217,6 +222,7 @@ def require_auth(func):
         return func(self, *args, **kwargs)
 
     import asyncio
+
     if asyncio.iscoroutinefunction(func):
         return async_wrapper
     else:
