@@ -29,8 +29,8 @@ class CASClient(ICASClient):
 
     def __init__(
         self,
-        user_token: str | None = None,
-        refresh_token: str | None = None,
+        account: str,
+        password: str,
     ) -> None:
         """
         初始化认证服务。
@@ -38,15 +38,32 @@ class CASClient(ICASClient):
         :param refresh_token: refreshToken; 对豫见郑大 APP 抓包获取。
         """
         self._client = httpx.Client()
-        self._user_token: str | None = user_token
-        self._refresh_token: str | None = refresh_token
-        self._public_key = self._get_public_key()
+        self._account = account
+        self._password = password
+        self._public_key: RSAPublicKey | None = None
+        self._user_token: str | None = None
+        self._refresh_token: str | None = None
+        self._logged_in: bool = False
 
     def __enter__(self) -> "CASClient":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
+
+    def set_token(
+        self,
+        user_token: str,
+        refresh_token: str
+    ) -> None:
+        """设置统一认证 Token。
+
+        Args:
+            user_token: `userToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`user_token`][zzupy.app.auth.CASClient.user_token] 获取
+            refresh_token: `refreshToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`refresh_token`][zzupy.app.auth.CASClient.refresh_token] 获取
+        """
+        self._user_token = user_token
+        self._refresh_token = refresh_token
 
     @property
     def user_token(self) -> str | None:
@@ -55,6 +72,11 @@ class CASClient(ICASClient):
     @property
     def refresh_token(self) -> str | None:
         return self._refresh_token
+
+    @property
+    def logged_in(self) -> bool:
+        """当前会话是否已登录"""
+        return self._logged_in
 
     def _validate_jwt(self) -> bool:
         if self._user_token is None or self._refresh_token is None:
@@ -66,10 +88,10 @@ class CASClient(ICASClient):
                 self._user_token, self._public_key, algorithms=self.JWT_ALGORITHMS
             )
         except jwt.ExpiredSignatureError:
-            logger.error("userToken 已过期，请使用账密登录并更新 userToken")
+            logger.error("userToken 已过期，将使用账密登录并更新 userToken")
             return False
         except jwt.InvalidTokenError:
-            logger.error("userToken 无效，请使用账密登录并更新 userToken")
+            logger.error("userToken 无效，将使用账密登录并更新 userToken")
             return False
 
         try:
@@ -77,10 +99,10 @@ class CASClient(ICASClient):
                 self._refresh_token, self._public_key, algorithms=self.JWT_ALGORITHMS
             )
         except jwt.ExpiredSignatureError:
-            logger.error("refreshToken 已过期，请使用账密登录并更新 refreshToken")
+            logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
             return False
         except jwt.InvalidTokenError:
-            logger.error("refreshToken 无效，请使用账密登录并更新 refreshToken")
+            logger.error("refreshToken 无效，将使用账密登录并更新 refreshToken")
             return False
 
         logger.info("userToken 和 refreshToken 有效")
@@ -113,9 +135,8 @@ class CASClient(ICASClient):
         encoded_bytes = base64.b64encode(encrypted_bytes)
         return f"__RSA__{encoded_bytes.decode('utf-8')}"
 
-    def login(self, account: str, password: str) -> None:
-        """
-        通过账号和密码登录。
+    def login(self) -> None:
+        """登录统一认证。
 
         成功后，userToken 和 refreshToken 会被存储在实例中，
 
@@ -125,12 +146,16 @@ class CASClient(ICASClient):
         :raise PraisingError: 如果服务器响应无法解析
         :raise NetworkError: 如果出现网络错误
         """
+        if self._public_key is None:
+            self._public_key = self._get_public_key()
+            
         if self._validate_jwt():
             logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
+            self._logged_in = True
             return
 
-        encrypted_account = self._encrypt_and_encode(account, self._public_key)
-        encrypted_password = self._encrypt_and_encode(password, self._public_key)
+        encrypted_account = self._encrypt_and_encode(self._account, self._public_key)
+        encrypted_password = self._encrypt_and_encode(self._password, self._public_key)
 
         headers = {"User-Agent": f"{self.APP_VERSION}()"}
         params = {
@@ -161,6 +186,7 @@ class CASClient(ICASClient):
             token_data = data["data"]
             self._user_token = token_data["idToken"]
             self._refresh_token = token_data["refreshToken"]
+            self._logged_in = True
 
             logger.info("登录成功，已获取 Token。")
 
@@ -180,11 +206,10 @@ class CASClient(ICASClient):
         self._client.headers.clear()
         self._user_token = None
         self._refresh_token = None
+        self._logged_in = False
 
     def close(self) -> None:
         """清除 Cookie 和连接池"""
-        self._client.cookies.clear()
-        self._client.headers.clear()
+        self.logout()
         self._client.close()
-        self._user_token = None
-        self._refresh_token = None
+
