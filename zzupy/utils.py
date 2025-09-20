@@ -195,3 +195,29 @@ class JsonPParser:
     @property
     def data(self) -> str:
         return self._data
+
+
+def require_auth(func):
+    """装饰器：确保调用方法前已登录
+
+    Raises:
+        NotLoggedInError: 如果未登录
+    """
+
+    @wraps(func)
+    async def async_wrapper(self, *args, **kwargs):
+        if not self.logged_in:
+            raise NotLoggedInError("需要登录")
+        return await func(self, *args, **kwargs)
+
+    @wraps(func)
+    def sync_wrapper(self, *args, **kwargs):
+        if not self.logged_in:
+            raise NotLoggedInError("需要登录")
+        return func(self, *args, **kwargs)
+
+    import asyncio
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    else:
+        return sync_wrapper
