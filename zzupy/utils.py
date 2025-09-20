@@ -206,13 +206,13 @@ def require_auth(func):
 
     @wraps(func)
     async def async_wrapper(self, *args, **kwargs):
-        if not self.logged_in:
+        if not self._logged_in:
             raise NotLoggedInError("需要登录")
         return await func(self, *args, **kwargs)
 
     @wraps(func)
     def sync_wrapper(self, *args, **kwargs):
-        if not self.logged_in:
+        if not self._logged_in:
             raise NotLoggedInError("需要登录")
         return func(self, *args, **kwargs)
 
