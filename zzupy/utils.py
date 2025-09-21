@@ -108,25 +108,6 @@ def get_local_ip(target: str = '8.8.8.8') -> str | None:
         return None
 
 
-def get_interface_by_ip(target_ip):
-    adapters = ifaddr.get_adapters()
-    for adapter in adapters:
-        for ip in adapter.ips:
-            if ip.is_IPv4:
-                if ip.ip == target_ip:
-                    return adapter.name
-            else:
-                if isinstance(ip.ip, str):
-                    ip_addr = ip.ip.split("%")[0] if "%" in ip.ip else ip.ip
-                    if ip_addr == target_ip:
-                        return adapter.name
-                elif isinstance(ip.ip, tuple):
-                    ip_addr = ip.ip[0] if len(ip.ip) > 0 else None
-                    if ip_addr == target_ip:
-                        return adapter.name
-    return None
-
-
 def discover_portal_info() -> PortalInfo | None:
     """自动发现校园网Portal认证信息
 
