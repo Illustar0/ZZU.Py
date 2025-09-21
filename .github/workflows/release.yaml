@@ -2,6 +2,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Create a prerelease (alpha/beta/rc)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   release:
@@ -40,6 +46,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
+          prerelease: ${{ github.event.inputs.prerelease }}
 
       - name: Publish | Upload package to PyPI
         if: steps.release.outputs.released == 'true'
