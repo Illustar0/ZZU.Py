@@ -234,3 +234,14 @@ class AuthResult(BaseModel):
     @property
     def success(self) -> bool:
         return self.result == 1
+
+
+class PortalInfo(BaseModel):
+    """探测出的 Portal 认证信息"""
+
+    auth_url: str
+    """认证网页 URL"""
+    portal_server_url: str
+    """Portal 服务器 URL"""
+    user_ip: str
+    """客户端 IP"""
