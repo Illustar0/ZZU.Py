@@ -33,17 +33,14 @@ jobs:
       - name: Build static files
         id: build
         run: |
-          uv sync
-          uv run pip install .
-          uv run pip install sphinx sphinx_book_theme myst_parser sphinx-design sphinx-markdown-builder autodoc_pydantic
-          cd docs
-          uv run make html
+          uv sync --extra docs
+          uv run mkdocs build
 
       - name: Upload static files as artifact
         id: deployment
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/build/html/
+          path: site/
 
   deploy:
     environment:
