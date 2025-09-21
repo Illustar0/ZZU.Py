@@ -52,7 +52,6 @@ build-backend = "hatchling.build"
 [tool.semantic_release]
 version_variables = [
     "zzupy/__init__.py:__version__",
-    "docs/source/conf.py:release",
 ]
 version_toml = [
     "pyproject.toml:project.version"
