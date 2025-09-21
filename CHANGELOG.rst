@@ -2,6 +2,173 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.1:
+
+v6.0.0-rc.1 (2025-09-21)
+========================
+
+✨ Features
+-----------
+
+* Accept account/password in CASClient ctor and centralize token management (`d09f60b`_)
+
+* Add ECardClient for campus ecard services (`48581cc`_)
+
+* Add EPortalClient, SelfServiceSystem and AuthResult model (`96d72c6`_)
+
+* Add ICASClient interface and CASClient CAS authentication client (`fe7c4bb`_)
+
+* Add JsonPParser for parsing JSONP strings (`30f63c5`_)
+
+* Add OperationError to represent operation failures (`3d12153`_)
+
+* Add portal discovery and PortalInfo model (`6f826b7`_)
+
+* Add require_auth decorator for sync and async methods (`6be3774`_)
+
+* Add SupwisdomClient for ZZU Supwisdom teaching system (`f70342e`_)
+
+* Introduce v2 API with complete architecture redesign (`a82f3b5`_)
+
+* Parameterize and harden get_local_ip with safer socket handling (`eb8c77c`_)
+
+* Update LOGIN_URL to CAS token endpoint (`6f33717`_)
+
+* Validate JWTs and cache CAS RSA public key to skip password login (`9bfda28`_)
+
+🪲 Bug Fixes
+------------
+
+* Correct decorator order for abstract properties (`31c73a3`_)
+
+* Use correct Transport for EPortalClient when force_bind is False (`6c5aeff`_)
+
+* Use internal _logged_in flag in login-required wrappers (`7ea50f5`_)
+
+📖 Documentation
+----------------
+
+* Add "统一认证" section explaining userOnlineDetect and workaround for mobile logout (`2899ac4`_)
+
+* Correct project name from "豫在郑大" to "豫见郑大" (`6a63e2f`_)
+
+* Normalize model annotations (`823bd0f`_)
+
+* Update get_sign implementation details (`8c4b0ef`_)
+
+♻️ Refactoring
+---------------
+
+* Add module docstring and import dependencies for decorators and auth (`81ccce5`_)
+
+* Modular redesign with async support and MkDocs migration (`e1e4db2`_)
+
+* Move discover_portal_info from utils to web.network (`a96bb62`_)
+
+* Remove ``_kget`` (`3c40984`_)
+
+* Remove ``sync_wrapper`` (`9a15873`_)
+
+* Remove get_interface_by_ip helper (`eb6d738`_)
+
+* Remove get_ip_by_interface helper (`e0f2897`_)
+
+* Remove OnlineDevices wrapper model (`a72e661`_)
+
+* Remove redundant check_permission helper (`c1e5e2e`_)
+
+* Rename and reorganize exception classes for clarity (`f719c2a`_)
+
+* Replace unnecessary f-strings with plain strings for static endpoints (`397830b`_)
+
+* Replace XOR helper functions with XorCipher class (`f1809b5`_)
+
+* Return List[OnlineDevice] from get_online_devices (`4b5a29d`_)
+
+* Use parse_qs and snake_case param in get_sign (`45439b4`_)
+
+🤖 Continuous Integration
+-------------------------
+
+* Add prerelease option to release workflow (`7cfe281`_)
+
+* Switch docs build workflow to MkDocs (`331b0c1`_)
+
+🧹 Chores
+---------
+
+* Add numpy and pyjwt to project dependencies (`db2fe1c`_)
+
+* Bump required Python version to ~=3.12 (`a83d86c`_)
+
+* Remove deprecated ``DeviceParams``, ``Courses`` and ``LoginResult`` models (`79c9898`_)
+
+* Remove NOTE.md (`0fcf2c7`_)
+
+* Remove outdated version variable from semantic-release (`cdb168b`_)
+
+* Update project metadata and bump dependencies (`009cc07`_)
+
+🎨 Code Style
+-------------
+
+* Format code with ruff (`125e2c9`_)
+
+💥 Breaking Changes
+-------------------
+
+* Removes legacy ZZUPy class and Sphinx docs; all APIs now use client-based pattern (e.g.,
+  CASClient.login() instead of ZZUPy.login()). Update imports and usage accordingly. Requires Python
+  >=3.13 for async features.
+
+* V2 API is not compatible with v1. All method signatures, authentication flow, and data models have
+  changed. See MIGRATION.md for v1 to v2 upgrade guide.
+
+.. _009cc07: https://github.com/Illustar0/ZZU.Py/commit/009cc077332ef5c693832d29b913fcef7863401f
+.. _0fcf2c7: https://github.com/Illustar0/ZZU.Py/commit/0fcf2c7fdc394719bfc9a36ef6162f4cb0753f17
+.. _125e2c9: https://github.com/Illustar0/ZZU.Py/commit/125e2c92ec2962544e700a9285437077602edc7f
+.. _2899ac4: https://github.com/Illustar0/ZZU.Py/commit/2899ac4ec60dae8ae0bc8c66939596910958a626
+.. _30f63c5: https://github.com/Illustar0/ZZU.Py/commit/30f63c54e43151792182bc545a5a9c3311459797
+.. _31c73a3: https://github.com/Illustar0/ZZU.Py/commit/31c73a375a86ea51f7587bd65350c6452c924d62
+.. _331b0c1: https://github.com/Illustar0/ZZU.Py/commit/331b0c133281dd23b91408a8df1c1017721ab06e
+.. _397830b: https://github.com/Illustar0/ZZU.Py/commit/397830bf07bedf852e080fd733933ae2b9e0e710
+.. _3c40984: https://github.com/Illustar0/ZZU.Py/commit/3c40984533f890511c92e7ad867c99011651b6f8
+.. _3d12153: https://github.com/Illustar0/ZZU.Py/commit/3d12153b7b425750cf6c5161cab31cbd8e34e53c
+.. _45439b4: https://github.com/Illustar0/ZZU.Py/commit/45439b484c61eb99bc7b57921a7673e6e32780b4
+.. _48581cc: https://github.com/Illustar0/ZZU.Py/commit/48581cc7603fbba09dfaf3bd123cd98d5e694cc9
+.. _4b5a29d: https://github.com/Illustar0/ZZU.Py/commit/4b5a29da184907c15db934e7c73e7895b91ed0fd
+.. _6a63e2f: https://github.com/Illustar0/ZZU.Py/commit/6a63e2f06f4d0c574db52c567c5ea42cb7b3392a
+.. _6be3774: https://github.com/Illustar0/ZZU.Py/commit/6be37745fd548a08f1719fe161c1e73690d1d4ff
+.. _6c5aeff: https://github.com/Illustar0/ZZU.Py/commit/6c5aeff07bad36e85b9799547d5c6ba63346d55e
+.. _6f33717: https://github.com/Illustar0/ZZU.Py/commit/6f3371744d84cd993ac378ebf89dbe5335f87fe7
+.. _6f826b7: https://github.com/Illustar0/ZZU.Py/commit/6f826b719a8ab8a3511a3784cd973228ccb24c4c
+.. _79c9898: https://github.com/Illustar0/ZZU.Py/commit/79c989810c80b691438411ca4d305e32c74a331f
+.. _7cfe281: https://github.com/Illustar0/ZZU.Py/commit/7cfe281d34c1c80bebe2ed0535fb581f92f9a011
+.. _7ea50f5: https://github.com/Illustar0/ZZU.Py/commit/7ea50f59bdb2ba8899c0579c1a15a60854e5484a
+.. _81ccce5: https://github.com/Illustar0/ZZU.Py/commit/81ccce58aa3fb4f9b3b3d573b5d5ef92270136fa
+.. _823bd0f: https://github.com/Illustar0/ZZU.Py/commit/823bd0f6d70b2e7c86caee69ae798e12a9208f43
+.. _8c4b0ef: https://github.com/Illustar0/ZZU.Py/commit/8c4b0effada40ae69330dc611a2a401a8ef58a0c
+.. _96d72c6: https://github.com/Illustar0/ZZU.Py/commit/96d72c6f9d230602776ed58b62225bbee1aa7e19
+.. _9a15873: https://github.com/Illustar0/ZZU.Py/commit/9a158739e52b0ec7a42aeb2a868441c96fc0b9ed
+.. _9bfda28: https://github.com/Illustar0/ZZU.Py/commit/9bfda2840ff7ebd9318363bd7be0f596357a5bea
+.. _a72e661: https://github.com/Illustar0/ZZU.Py/commit/a72e661d556acd1d987e16cc17251991d8fb8d9a
+.. _a82f3b5: https://github.com/Illustar0/ZZU.Py/commit/a82f3b50525fb06da296b6ff59714240ed27d315
+.. _a83d86c: https://github.com/Illustar0/ZZU.Py/commit/a83d86c438a7b6d6245229ed94a43f192e763e99
+.. _a96bb62: https://github.com/Illustar0/ZZU.Py/commit/a96bb629344d337288a285d1c5cee8bcc499734e
+.. _c1e5e2e: https://github.com/Illustar0/ZZU.Py/commit/c1e5e2e8c390524352bae8107f22898090c67b4b
+.. _cdb168b: https://github.com/Illustar0/ZZU.Py/commit/cdb168b2f9664d04230f4a2fbfef31425ecdb54c
+.. _d09f60b: https://github.com/Illustar0/ZZU.Py/commit/d09f60b5d0cca4ec29d7ff0f391e07dcff2d0cd6
+.. _db2fe1c: https://github.com/Illustar0/ZZU.Py/commit/db2fe1c9e9cb4a0d24b15e694f8b606dac581672
+.. _e0f2897: https://github.com/Illustar0/ZZU.Py/commit/e0f2897f57efd6673d632adcb385b06e247f1126
+.. _e1e4db2: https://github.com/Illustar0/ZZU.Py/commit/e1e4db2a7cbccb782eb6e9954cab98016753a85c
+.. _eb6d738: https://github.com/Illustar0/ZZU.Py/commit/eb6d7383d4109604fceff4e22b4f20c4fcfc047b
+.. _eb8c77c: https://github.com/Illustar0/ZZU.Py/commit/eb8c77cb839792773a0e686740103383965ed809
+.. _f1809b5: https://github.com/Illustar0/ZZU.Py/commit/f1809b5fe091d06ce3f2851b159b4659707a63b1
+.. _f70342e: https://github.com/Illustar0/ZZU.Py/commit/f70342e27416d5a9cd611718f03f16e245aab79d
+.. _f719c2a: https://github.com/Illustar0/ZZU.Py/commit/f719c2aed5e8aad38907b5312642b64a5e65a300
+.. _fe7c4bb: https://github.com/Illustar0/ZZU.Py/commit/fe7c4bb1f39579ef14976acc2a8b6e02be918c02
+
+
 .. _changelog-v5.1.0:
 
 v5.1.0 (2025-05-22)
