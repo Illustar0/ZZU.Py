@@ -45,7 +45,7 @@ class ECardClient:
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
-        self._client = httpx.Client()
+        self._client = httpx.AsyncClient()
         self._cas_client = cas_client
         self._access_token: str | None = None
         self._refresh_token: str | None = None
@@ -54,13 +54,13 @@ class ECardClient:
         self._logged_in: bool = False
         self._refresh_timer: threading.Timer | None = None
 
-    def __enter__(self) -> "ECardClient":
+    async def __aenter__(self) -> "ECardClient":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.close()
 
-    def _get_tid(self) -> None:
+    async def _get_tid(self) -> None:
         """获取 tid
 
         Raises:
@@ -75,7 +75,7 @@ class ECardClient:
 
         try:
             logger.debug("正在向 {} 发送请求获取 tid...", self.TID_URL)
-            response = self._client.get(
+            response = await self._client.get(
                 self.TID_URL,
                 params=params,
                 follow_redirects=False,
@@ -109,7 +109,7 @@ class ECardClient:
             logger.error("获取 tid 网络请求失败: {}", exc)
             raise NetworkError("网络连接异常") from exc
 
-    def login(self) -> None:
+    async def login(self) -> None:
         """登录到校园卡系统
 
         Raises:
@@ -118,13 +118,13 @@ class ECardClient:
             NetworkError: 如果网络请求失败
         """
         logger.debug("开始登录校园卡系统")
-        self._get_tid()
-        self._get_tokens()
+        await self._get_tid()
+        await self._get_tokens()
         self._logged_in = True
         self._schedule_token_refresh()
         logger.info("校园卡系统登录成功")
 
-    def _get_tokens(self) -> None:
+    async def _get_tokens(self) -> None:
         """获取 ecard access token
 
         Raises:
@@ -139,7 +139,7 @@ class ECardClient:
 
         try:
             logger.debug("正在向 {} 发送请求获取 token...", self.TOKEN_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.TOKEN_URL,
                 json=data,
             )
@@ -191,15 +191,15 @@ class ECardClient:
         self._refresh_timer.start()
         logger.debug("已安排 token 刷新定时器，将在{}秒后执行", self.TOKEN_REFRESH_INTERVAL)
 
-    def _refresh_tokens(self) -> None:
+    async def _refresh_tokens(self) -> None:
         """刷新tokens
         
         重新执行login流程来更新tid和tokens
         """
         try:
             logger.info("开始执行 token 自动刷新")
-            self._get_tid()
-            self._get_tokens()
+            await self._get_tid()
+            await self._get_tokens()
             self._schedule_token_refresh()  # 重新安排下次刷新
             logger.info("token 自动刷新完成")
         except Exception as exc:
@@ -208,7 +208,7 @@ class ECardClient:
             self._schedule_token_refresh()
 
     @require_auth
-    def get_default_room(self) -> str:
+    async def get_default_room(self) -> str:
         """获取账户默认房间
 
         Returns:
@@ -227,7 +227,7 @@ class ECardClient:
 
         try:
             logger.debug("正在向 {} 发送请求获取默认房间...", self.CONFIG_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.CONFIG_URL,
                 headers=headers,
                 json=data,
@@ -260,7 +260,7 @@ class ECardClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    def recharge_energy(self, payment_password: str, amt: int, room: str) -> None:
+    async def recharge_energy(self, payment_password: str, amt: int, room: str) -> None:
         """为 room 充值电费
 
         Args:
@@ -286,7 +286,7 @@ class ECardClient:
         try:
             # 获取加密信息
             logger.debug("正在向 {} 发送请求获取加密信息...", self.ENCRYPT_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.ENCRYPT_URL,
                 headers=headers,
             )
@@ -341,7 +341,7 @@ class ECardClient:
             data = {"id": pay_id, "params": (encrypted_params.hex())[2:]}
 
             logger.debug("正在向 {} 发送充值请求...", self.PAY_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.PAY_URL,
                 headers=headers,
                 json=data,
@@ -371,7 +371,7 @@ class ECardClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    def get_balance(self) -> float:
+    async def get_balance(self) -> float:
         """获取校园卡余额
 
         Returns:
@@ -385,7 +385,7 @@ class ECardClient:
 
         try:
             logger.debug("正在向 {} 发送请求获取校园卡余额...", self.BALANCE_URL)
-            response = self._client.get(
+            response = await self._client.get(
                 self.BALANCE_URL,
                 headers=headers,
             )
@@ -416,7 +416,7 @@ class ECardClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    def get_room_dict(self, room_id: str) -> dict:
+    async def get_room_dict(self, room_id: str) -> dict:
         """获取房间的字典
 
         Args:
@@ -473,7 +473,7 @@ class ECardClient:
 
         try:
             logger.debug("正在向 {} 发送请求获取房间列表...", self.LOCATION_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.LOCATION_URL,
                 headers=headers,
                 json=data,
@@ -510,7 +510,7 @@ class ECardClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    def get_remaining_energy(self, room: str | None = None) -> float:
+    async def get_remaining_energy(self, room: str | None = None) -> float:
         """获取剩余电量
 
         Args:
@@ -524,7 +524,7 @@ class ECardClient:
             ParsingError: 如果响应解析失败
             NetworkError: 如果网络请求失败
         """
-        room = self.get_default_room() if room is None else room
+        room = await self.get_default_room() if room is None else room
         logger.debug("正在获取房间 {} 的剩余电量", room)
 
         # 解析房间信息
@@ -549,7 +549,7 @@ class ECardClient:
 
         try:
             logger.debug("正在向 {} 发送请求获取剩余电量...", self.ACCOUNT_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.ACCOUNT_URL,
                 headers=headers,
                 json=data,
@@ -600,13 +600,13 @@ class ECardClient:
         self._logged_in = False
         logger.info("已登出校园卡系统")
 
-    def close(self) -> None:
+    @require_auth
+    async def close(self) -> None:
         """清除 Cookie 和连接池"""
         logger.debug("正在关闭校园卡客户端")
         if self._refresh_timer is not None:
             self._refresh_timer.cancel()
             self._refresh_timer = None
-        if self._logged_in:
-            self.logout()
-        self._client.close()
+        self.logout()
+        await self._client.aclose()
         logger.info("校园卡客户端已关闭")

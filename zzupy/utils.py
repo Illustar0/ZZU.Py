@@ -3,28 +3,24 @@
 import hashlib
 import re
 import socket
-import urllib
 from functools import wraps
 from typing import Dict
 from urllib.parse import parse_qs
 
 import gmalg
-import httpx
-import ifaddr
-from bs4 import BeautifulSoup
 
-from zzupy.exception import NotLoggedInError, NetworkError, ParsingError
-from zzupy.models import PortalInfo
+from zzupy.exception import NotLoggedInError
 
 
 def get_sign(dynamic_secret: str, params: str) -> str:
-    """
-    获取sign值
+    """获取sign值
 
-    :param str dynamic_secret: login 后自动获取，来自 login-token 请求
-    :param str params: URL 请求参数
-    :return: sign 值
-    :rtype: str
+    Args:
+        dynamic_secret (str): login 后自动获取，来自 login-token 请求
+        params (str): URL 请求参数
+
+    Returns:
+        str: sign 值
     """
     parsed_params: Dict[str, str] = {k: v[0] for k, v in parse_qs(params).items()}
 
@@ -41,14 +37,17 @@ def get_sign(dynamic_secret: str, params: str) -> str:
 
 
 def pkcs7_unpad(padded_data: bytes, block_size: int) -> bytes:
-    """
-    去除数据中的PKCS#7填充。
+    """去除数据中的PKCS#7填充。
 
-    :param bytes padded_data: 带填充的数据
-    :param int block_size: 用于填充的块大小
-    :return: 去除填充后的数据
-    :rtype: bytes
-    :raises ValueError: 如果填充无效
+    Args:
+        padded_data (bytes): 带填充的数据
+        block_size (int): 用于填充的块大小
+
+    Returns:
+        bytes: 去除填充后的数据
+
+    Raises:
+        ValueError: 如果填充无效
     """
     if not padded_data or len(padded_data) % block_size != 0:
         raise ValueError("无效的填充数据长度")
@@ -69,14 +68,15 @@ def pkcs7_unpad(padded_data: bytes, block_size: int) -> bytes:
     return padded_data[:-padding_len]
 
 
-def sm4_decrypt_ecb(ciphertext: bytes, key: bytes):
-    """
-    SM4 解密，ECB模式
+def sm4_decrypt_ecb(ciphertext: bytes, key: bytes) -> str:
+    """SM4 解密，ECB模式
 
-    :param bytes ciphertext: 密文
-    :param bytes key: 密钥
-    :return: 明文 Hex
-    :rtype: str
+    Args:
+        ciphertext (bytes): 密文
+        key (bytes): 密钥
+
+    Returns:
+        明文 Hex
     """
     sm4 = gmalg.SM4(key)
     block_size = 16
@@ -88,7 +88,7 @@ def sm4_decrypt_ecb(ciphertext: bytes, key: bytes):
     return decrypted.decode()
 
 
-def get_local_ip(target: str = '8.8.8.8') -> str | None:
+def get_local_ip(target: str = "8.8.8.8") -> str | None:
     """
     获取用于连接到特定目标IP的本地IP地址。
 
@@ -96,8 +96,8 @@ def get_local_ip(target: str = '8.8.8.8') -> str | None:
         target: 目标主机名或IP地址。默认为 '8.8.8.8'。
 
     Returns:
-        一个字符串，表示用于到达目标的本地IP地址。
-        如果发生网络错误（例如，网络不可达），则返回 None。
+        str: 用于到达目标的本地IP地址
+        None: 如果发生网络错误
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -109,18 +109,14 @@ def get_local_ip(target: str = '8.8.8.8') -> str | None:
 
 
 class XorCipher:
-    """
-    一个使用异或 (XOR) 算法进行简单加密和解密的类。
-    """
+    """一个使用异或 (XOR) 算法进行简单加密和解密的类。"""
 
     def __init__(self, key_string: str = ""):
         self._key: int = self._generate_key(key_string)
 
     @staticmethod
     def _generate_key(s: str) -> int:
-        """
-        根据输入字符串计算异或密钥。
-        """
+        """根据输入字符串计算异或密钥。"""
         ret = 0
         for char in s:
             ret ^= ord(char)
@@ -131,9 +127,10 @@ class XorCipher:
         return self._key
 
     def encrypt(self, string: str) -> str:
-        """
-        将明文与实例密钥进行异或运算，并转为十六进制字符串。
-        :param string: 明文
+        """将明文与实例密钥进行异或运算，并转为十六进制字符串。
+
+        Args:
+            string: 明文
         """
         if len(string) > 512:
             return "-1"
@@ -147,11 +144,13 @@ class XorCipher:
         return "".join(encrypted_output)
 
     def decrypt(self, hex_string: str) -> str:
-        """
-        将十六进制字符串解密回原始密码。
+        """将十六进制字符串解密回原始密码。
 
-        :param hex_string: 十六进制字符串
-        :raise ValueError: 如果十六进制字符串格式错误
+        Args:
+            hex_string: 十六进制字符串
+
+        Raises:
+            ValueError: 如果十六进制字符串格式错误
         """
         if len(hex_string) % 2 != 0:
             raise ValueError("十六进制字符串长度必须为偶数")

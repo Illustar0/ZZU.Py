@@ -38,7 +38,7 @@ class SupwisdomClient:
         """
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
-        self._client = httpx.Client()
+        self._client = httpx.AsyncClient()
         self._cas_client = cas_client
         self._client.cookies.set("userToken", cas_client.user_token, ".zzu.edu.cn", "/")
         self._dynamic_secret: str | None = None
@@ -47,13 +47,13 @@ class SupwisdomClient:
         self._current_semester_id: int | None = None
         self._logged_in: bool = False
 
-    def __enter__(self) -> "SupwisdomClient":
+    async def __aenter__(self) -> "SupwisdomClient":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.close()
 
-    def login(self) -> None:
+    async def login(self) -> None:
         """登录到树维教务系统
 
         Raises:
@@ -75,7 +75,7 @@ class SupwisdomClient:
 
         try:
             logger.debug("正在向树维教务 ({}) 发送登录请求...", self.LOGIN_TOKEN_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.LOGIN_TOKEN_URL,
                 data=data,
             )
@@ -90,7 +90,8 @@ class SupwisdomClient:
             self._biz_type_id = business_data["user_info"]["biz_type_infos"][0]["id"]
 
             self._logged_in = True
-            self._current_semester_id = self.get_semester_data().cur_semester_id
+            semester_data = await self.get_semester_data()
+            self._current_semester_id = semester_data.cur_semester_id
 
             logger.info("树维教务登录成功")
 
@@ -105,7 +106,7 @@ class SupwisdomClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    def get_courses(
+    async def get_courses(
         self,
         start_date: str,
         semester_id: str | int = None,
@@ -157,7 +158,7 @@ class SupwisdomClient:
 
         try:
             logger.debug("正在向 {} 发送请求...", self.GET_COURSES_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.GET_COURSES_URL,
                 headers=headers,
                 data=data,
@@ -214,7 +215,7 @@ class SupwisdomClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    def get_current_week_courses(self, semester_id: str | int = None) -> np.ndarray:
+    async def get_current_week_courses(self, semester_id: str | int = None) -> np.ndarray:
         """获取本周课程表
 
         Args:
@@ -227,10 +228,10 @@ class SupwisdomClient:
         today = datetime.datetime.now()
         monday = today - datetime.timedelta(days=today.weekday())
         monday_str = monday.strftime("%Y-%m-%d")
-        return self.get_courses(monday_str, semester_id)
+        return await self.get_courses(monday_str, semester_id)
 
     @require_auth
-    def get_today_courses(self, semester_id: str | int = None) -> np.ndarray:
+    async def get_today_courses(self, semester_id: str | int = None) -> np.ndarray:
         """获取今日课程表
 
         Args:
@@ -239,14 +240,14 @@ class SupwisdomClient:
         Returns:
             今日课程数组，索引=节次(0=第1节...9=第10节)，元素为Course对象或None
         """
-        week_matrix = self.get_current_week_courses(semester_id)
+        week_matrix = await self.get_current_week_courses(semester_id)
         today = datetime.datetime.now()
         day_index = today.weekday()
 
         return week_matrix[day_index]
 
     @require_auth
-    def get_next_course_today(self, semester_id: str | int = None) -> Course | None:
+    async def get_next_course_today(self, semester_id: str | int = None) -> Course | None:
         """获取当天的下一节课
 
         Args:
@@ -255,7 +256,7 @@ class SupwisdomClient:
         Returns:
             下一节课的 Course 对象，如果没有则返回 None
         """
-        today_courses = self.get_today_courses(semester_id)
+        today_courses = await self.get_today_courses(semester_id)
         current_time = datetime.datetime.now()
 
         next_course = None
@@ -281,7 +282,7 @@ class SupwisdomClient:
         return next_course
 
     @require_auth
-    def get_room_data(
+    async def get_room_data(
         self,
         building_id: int | str,
         date_str: str = None,
@@ -318,7 +319,7 @@ class SupwisdomClient:
 
         try:
             logger.debug("正在向 {} 发送请求...", self.GET_ROOM_DATA_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.GET_ROOM_DATA_URL,
                 headers=headers,
                 data=data,
@@ -345,7 +346,7 @@ class SupwisdomClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    def get_semester_data(self) -> SemesterData:
+    async def get_semester_data(self) -> SemesterData:
         """获取学期数据
 
         Returns:
@@ -369,7 +370,7 @@ class SupwisdomClient:
 
         try:
             logger.debug("正在向 {} 发送请求...", self.GET_SEMESTER_URL)
-            response = self._client.post(
+            response = await self._client.post(
                 self.GET_SEMESTER_URL,
                 headers=headers,
                 data=data,
@@ -415,6 +416,7 @@ class SupwisdomClient:
         """
         return self._current_semester_id
 
+    @require_auth
     def logout(self) -> None:
         """登出账户，清除 Cookie 但保留连接池"""
         logger.debug("正在登出树维教务")
@@ -427,9 +429,9 @@ class SupwisdomClient:
         self._logged_in = False
         logger.debug("树维教务已登出")
 
-    def close(self) -> None:
+    @require_auth
+    async def close(self) -> None:
         """清除 Cookie 和连接池"""
-        if self._logged_in:
-            self.logout()
-        self._client.close()
+        self.logout()
+        await self._client.aclose()
         logger.debug("树维教务连接池已关闭")

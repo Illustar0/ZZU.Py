@@ -13,7 +13,6 @@ from loguru import logger
 
 from zzupy.app.interfaces import ICASClient
 from zzupy.exception import LoginError, ParsingError, NetworkError
-from zzupy.utils import require_auth
 
 
 class CASClient(ICASClient):
@@ -39,7 +38,7 @@ class CASClient(ICASClient):
             account: 账号
             password: 密码
         """
-        self._client = httpx.Client()
+        self._client = httpx.AsyncClient()
         self._account = account
         self._password = password
         self._public_key: RSAPublicKey | None = None
@@ -47,11 +46,11 @@ class CASClient(ICASClient):
         self._refresh_token: str | None = None
         self._logged_in: bool = False
 
-    def __enter__(self) -> "CASClient":
+    async def __aenter__(self) -> "CASClient":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.close()
 
     def set_token(self, user_token: str, refresh_token: str) -> None:
         """设置统一认证 Token。
@@ -108,12 +107,12 @@ class CASClient(ICASClient):
         logger.info("userToken 和 refreshToken 有效")
         return True
 
-    def _get_public_key(self) -> RSAPublicKey:
+    async def _get_public_key(self) -> RSAPublicKey:
         """从 CAS 服务器获取 RSA 公钥。"""
         logger.debug("正在从 {} 获取公钥...", self.PUBLIC_KEY_URL)
         headers = {"User-Agent": "okhttp/3.12.1"}
         try:
-            response = self._client.get(self.PUBLIC_KEY_URL, headers=headers)
+            response = await self._client.get(self.PUBLIC_KEY_URL, headers=headers)
             response.raise_for_status()
             public_key_pem = response.content
             return serialization.load_pem_public_key(public_key_pem)
@@ -131,7 +130,7 @@ class CASClient(ICASClient):
         encoded_bytes = base64.b64encode(encrypted_bytes)
         return f"__RSA__{encoded_bytes.decode('utf-8')}"
 
-    def login(self) -> None:
+    async def login(self) -> None:
         """登录统一认证。
 
         成功后，[`userToken`][zzupy.app.auth.CASClient.user_token] 和 [`refreshToken`][zzupy.app.auth.CASClient.refresh_token] 会被存储在实例中.
@@ -144,7 +143,7 @@ class CASClient(ICASClient):
             NetworkError: 如果出现网络错误
         """
         if self._public_key is None:
-            self._public_key = self._get_public_key()
+            self._public_key = await self._get_public_key()
 
         if self._validate_jwt():
             logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
@@ -168,7 +167,7 @@ class CASClient(ICASClient):
 
         try:
             logger.debug("正在向 {} 发送登录请求...", self.LOGIN_URL)
-            response = self._client.post(self.LOGIN_URL, params=params, headers=headers)
+            response = await self._client.post(self.LOGIN_URL, params=params, headers=headers)
             response.raise_for_status()
 
             logger.debug("/passwordLogin 请求响应体: {}", response.text)
@@ -197,7 +196,6 @@ class CASClient(ICASClient):
             logger.error("登录网络请求失败: {}", exc)
             raise NetworkError("网络连接异常") from exc
 
-    @require_auth
     def logout(self) -> None:
         """登出账户，清除 Cookie 但保留连接池"""
         self._client.cookies.clear()
@@ -206,8 +204,7 @@ class CASClient(ICASClient):
         self._refresh_token = None
         self._logged_in = False
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """清除 Cookie 和连接池"""
-        if self._logged_in:
-            self.logout()
-        self._client.close()
+        self.logout()
+        await self._client.aclose()

@@ -1,0 +1,175 @@
+site_name: "ZZU.Py 文档"
+site_description: "A Python handler for mkdocstrings."
+site_url: "https://illustar0.github.io/ZZU.Py/"
+repo_url: "https://github.com/Illustar0/ZZU.Py"
+repo_name: "Illustar0/ZZU.Py"
+watch: [mkdocs.yml, README.md , zzupy]
+copyright: Copyright © 2025 Illustar0
+edit_uri: edit/main/docs/
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+
+extra_css:
+- css/material.css
+- css/mkdocstrings.css
+- css/insiders.css
+
+nav:
+- Home:
+  - Overview: index.md
+- Usage:
+  - 移动端:
+    - 统一认证: usage/app/auth.md
+    - 树维教务: usage/app/supwisdom.md
+    - 一卡通: usage/app/ecard.md
+  - Web 端:
+    - 校园网: usage/web/network.md
+- Note: note.md
+- API: reference/api.md
+
+theme:
+
+  name: material
+  #logo: logo.png
+  features:
+  - announce.dismiss
+  - content.action.edit
+  - content.action.view
+  - content.code.annotate
+  - content.code.copy
+  - content.tooltips
+  - navigation.footer
+  - navigation.instant.preview
+  - navigation.path
+  - navigation.sections
+  - navigation.tabs
+  - navigation.tabs.sticky
+  - navigation.top
+  - search.highlight
+  - search.suggest
+  - toc.follow
+  palette:
+  - media: "(prefers-color-scheme)"
+    toggle:
+      icon: material/brightness-auto
+      name: Switch to light mode
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    primary: teal
+    accent: purple
+    toggle:
+      icon: material/weather-sunny
+      name: Switch to dark mode
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: black
+    accent: lime
+    toggle:
+      icon: material/weather-night
+      name: Switch to system preference
+
+
+markdown_extensions:
+- abbr
+- attr_list
+- admonition
+- callouts:
+    strip_period: no
+- footnotes
+- md_in_html
+- pymdownx.blocks.admonition
+- pymdownx.blocks.details
+- pymdownx.blocks.tab:
+    alternate_style: true
+    slugify: !!python/object/apply:pymdownx.slugs.slugify
+      kwds:
+        case: lower
+- pymdownx.details
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- pymdownx.snippets
+- pymdownx.highlight:
+    pygments_lang_class: true
+- pymdownx.magiclink
+- pymdownx.superfences:
+    custom_fences:
+    - name: mermaid
+      class: mermaid
+      format: !!python/name:pymdownx.superfences.fence_code_format
+- pymdownx.tabbed:
+    alternate_style: true
+    slugify: !!python/object/apply:pymdownx.slugs.slugify
+      kwds:
+        case: lower
+- pymdownx.tasklist:
+    custom_checkbox: true
+- toc:
+    permalink: "¤"
+
+plugins:
+- search:
+    lang:
+      - en
+      - ja
+      - zh
+    separator: '[\s\u200b\-]'
+- include-markdown
+- autorefs
+- markdown-exec
+- section-index
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [zzupy]
+        inventories:
+        - https://docs.python.org/3/objects.inv
+        - https://mkdocstrings.github.io/objects.inv
+        - https://mkdocstrings.github.io/autorefs/objects.inv
+        - https://mkdocstrings.github.io/griffe/objects.inv
+        - https://python-markdown.github.io/objects.inv
+        options:
+          backlinks: tree
+          docstring_options:
+            ignore_init_summary: true
+          docstring_section_style: list
+          filters: public
+          heading_level: 1
+          inherited_members: true
+          line_length: 88
+          merge_init_into_class: true
+          parameter_headings: true
+          type_parameter_headings: true
+          preload_modules: [mkdocstrings]
+          relative_crossrefs: true
+          scoped_crossrefs: true
+          separate_signature: true
+          show_bases: false
+          show_inheritance_diagram: true
+          show_root_heading: true
+          show_root_full_path: false
+          show_signature_annotations: true
+          show_signature_type_parameters: true
+          show_source: false
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+          signature_crossrefs: true
+          summary: true
+          unwrap_annotated: true
+          members_order: source
+
+- git-revision-date-localized:
+    enabled: true
+    enable_creation_date: true
+    type: timeago
+- minify:
+    minify_html: true
+
+
+
+
+
+

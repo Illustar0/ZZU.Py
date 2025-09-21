@@ -14,7 +14,7 @@ import ifaddr
 from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
-from zzupy.exception import LoginError, ParsingError, NetworkError
+from zzupy.exception import LoginError, ParsingError, NetworkError, NotLoggedInError
 from zzupy.models import AuthResult, OnlineDevice, PortalInfo
 from zzupy.utils import (
     get_local_ip,
@@ -24,7 +24,7 @@ from zzupy.utils import (
 )
 
 
-def discover_portal_info() -> PortalInfo | None:
+async def discover_portal_info() -> PortalInfo | None:
     """自动发现校园网Portal认证信息
 
     Returns:
@@ -58,13 +58,13 @@ def discover_portal_info() -> PortalInfo | None:
         parsed = urllib.parse.urlparse(portal_url)
         return f"{parsed.scheme}://{parsed.netloc}"
 
-    def _get_portal_server_url(client: httpx.Client, auth_url: str) -> str:
+    async def _get_portal_server_url(client: httpx.AsyncClient, auth_url: str) -> str:
         """获取 Portal 服务器 URL"""
         DEFAULT_HTTP_PORT = 801
         DEFAULT_HTTPS_PORT = 802
 
         try:
-            response = client.get(f"{auth_url}/a41.js")
+            response = await client.get(f"{auth_url}/a41.js")
             js_params = _parse_js_config(response.text)
 
             hostname = urllib.parse.urlparse(auth_url).hostname
@@ -88,8 +88,8 @@ def discover_portal_info() -> PortalInfo | None:
         return {key: int(value) for key, value in matches}
 
     try:
-        with httpx.Client(timeout=10.0) as client:
-            response = client.get("http://bilibili.com", follow_redirects=True)
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get("http://bilibili.com", follow_redirects=True)
 
             if str(response.url).startswith("https://"):
                 raise NetworkError("未被 MITM，请检查校园网是否已认证")
@@ -99,7 +99,7 @@ def discover_portal_info() -> PortalInfo | None:
             user_ip = _extract_user_ip(portal_url)
 
             auth_url = _extract_auth_url(portal_url)
-            portal_server_url = _get_portal_server_url(client, auth_url)
+            portal_server_url = await _get_portal_server_url(client, auth_url)
 
             return PortalInfo(
                 auth_url=auth_url, portal_server_url=portal_server_url, user_ip=user_ip
@@ -130,6 +130,7 @@ class EPortalClient:
                 如果你在路由器后使用本方法，则需要把 `bind_address` 填写为路由器分配的内网 IP 并启用 `force_bind`
         """
         self._base_url = base_url
+        self._client = httpx.AsyncClient()
         if bind_address is None:
             self._bind_address = get_local_ip()
         else:
@@ -141,24 +142,24 @@ class EPortalClient:
             ]
 
             if self._bind_address in local_ips:
-                transport = httpx.HTTPTransport(local_address=self._bind_address)
+                transport = httpx.HTTPTransport(local_address=bind_address)
             else:
                 transport = httpx.HTTPTransport()
 
         else:
-            transport = httpx.HTTPTransport(local_address=self._bind_address)
-        self._client = httpx.Client(
+            transport = httpx.HTTPTransport(local_address=bind_address)
+        self._client = httpx.AsyncClient(
             transport=transport,
         )
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         if hasattr(self, "_client") and not self._client.is_closed:
-            self._client.close()
+            await self._client.aclose()
 
-    def portal_auth(
+    async def portal_auth(
         self,
         account: str,
         password: str,
@@ -226,7 +227,7 @@ class EPortalClient:
                 ("lang", "zh"),
             ]
         try:
-            response = self._client.get(
+            response = await self._client.get(
                 f"{self._base_url}/eportal/portal/login", params=params
             )
             response.raise_for_status()
@@ -237,7 +238,7 @@ class EPortalClient:
         except (json.JSONDecodeError, ValueError, ValidationError) as e:
             raise ParsingError(f"无法解析的 API 响应: {e}") from e
 
-    def auth(
+    async def auth(
         self, account: str, password: str, isp_suffix: str = None, encrypt: bool = False
     ) -> AuthResult:
         """进行 Portal 认证
@@ -251,23 +252,23 @@ class EPortalClient:
         Returns:
             AuthResult: 认证结果
         """
-        return self.portal_auth(f"{account}{isp_suffix or ''}", password, encrypt)
+        return await self.portal_auth(f"{account}{isp_suffix or ''}", password, encrypt)
 
 
 class SelfServiceSystem:
     """自助服务系统"""
 
     def __init__(self, base_url: str):
-        self._client = httpx.Client(base_url=base_url)
+        self._client = httpx.AsyncClient(base_url=base_url)
         self._logged_in = False
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
 
-    def login(self, account: str, password: str) -> None:
+    async def login(self, account: str, password: str) -> None:
         """登录
 
         Args:
@@ -280,7 +281,7 @@ class SelfServiceSystem:
             NetworkError: 如果发生网络错误。
         """
         try:
-            response = self._client.get(
+            response = await self._client.get(
                 "/Self/login/",
                 follow_redirects=False,
             )
@@ -296,7 +297,7 @@ class SelfServiceSystem:
             checkcode = checkcode_inputs[0]["value"]
 
             # 不能少
-            self._client.get(
+            await self._client.get(
                 "/Self/login/randomCode",
                 params={"t": str(random.random())},
             )
@@ -310,7 +311,7 @@ class SelfServiceSystem:
                 "code": "",
             }
 
-            response = self._client.post(
+            response = await self._client.post(
                 "/Self/login/verify", data=data, follow_redirects=True
             )
             # 你妈教你这么设计 API 的？
@@ -322,7 +323,7 @@ class SelfServiceSystem:
             raise NetworkError(f"发生网络错误: {e}") from e
 
     @require_auth
-    def get_online_devices(self) -> List[OnlineDevice]:
+    async def get_online_devices(self) -> List[OnlineDevice]:
         """获取当前在线设备
 
         Returns:
@@ -339,7 +340,7 @@ class SelfServiceSystem:
             "_": str(int(time.time())),
         }
         try:
-            response = self._client.get(
+            response = await self._client.get(
                 "/Self/dashboard/getOnlineList",
                 params=params,
             )
@@ -352,7 +353,7 @@ class SelfServiceSystem:
             raise ParsingError(f"无法解析的 API 响应: {e}") from e
 
     @require_auth
-    def kick_device(self, session_id: str):
+    async def kick_device(self, session_id: str):
         """将设备踢下线
 
         Args:
@@ -361,29 +362,33 @@ class SelfServiceSystem:
         Raises:
             NotLoggedInError: 如果未登录
         """
+        if not self._logged_in:
+            raise NotLoggedInError("需要登录。")
         params = {
             "t": str(random.random()),
             "sessionid": session_id,
         }
-        response = self._client.get(
+        response = await self._client.get(
             "/Self/dashboard/tooffline",
             params=params,
         )
         response.raise_for_status()
 
     @require_auth
-    def logout(self):
+    async def logout(self):
         """登出
 
         Raises:
             NotLoggedInError: 如果未登录
         """
-        self._client.get(
+        if not self._logged_in:
+            raise NotLoggedInError("需要登录。")
+        await self._client.get(
             "/Self/login/logout",
         )
         self._logged_in = False
 
-    def close(self):
-        if self._logged_in:
-            self.logout()
-        self._client.close()
+    @require_auth
+    async def close(self):
+        await self.logout()
+        await self._client.aclose()

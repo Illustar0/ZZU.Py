@@ -1,5 +1,7 @@
+"""数据模型层"""
+
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -155,10 +157,14 @@ class RoomOccupancyData(BaseModel):
     def get_available_rooms(self, unit_index: int) -> List[RoomOccupancy]:
         """获取指定时间单元可用的教室列表
 
-        :param unit_index: 时间单元索引（从1开始）
-        :return: 可用教室列表
-        :rtype: List[RoomOccupancy]
-        :raises ValueError: 如果时间单元索引超出范围
+        Args:
+            unit_index: 时间单元索引（从1开始）
+
+        Returns:
+            List[RoomOccupancy]: 可用教室列表
+
+        Raises:
+            ValueError: 如果时间单元索引超出范围
         """
         if unit_index < 1 or unit_index > self.max_unit:
             raise ValueError(f"时间单元索引必须在1到{self.max_unit}之间")
@@ -229,7 +235,7 @@ class AuthResult(BaseModel):
     """认证结果"""
     message: str = Field(..., alias="msg")
     """Portal 服务器返回信息"""
-    ret_code: int  # 不知道是个啥
+    ret_code: int | None = None  # 不知道是个啥
 
     @property
     def success(self) -> bool:

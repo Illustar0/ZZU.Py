@@ -6,8 +6,8 @@
 
 ZZU.Py 是一个为郑州大学各个线上系统和相关服务提供 Python API 封装的库。它提供了简洁易用的接口来访问校园各类服务，包括移动应用 API、校园网络认证、一卡通服务等。
 
-> [!WARNING]  
-> 研究生教务系统暂未适配
+!!! warning
+    研究生教务系统暂未适配
 
 ## 特性
 
@@ -86,5 +86,6 @@ with SupwisdomClient(cas) as client:
 ## 相关链接
 
 - [GitHub 仓库](https://github.com/Illustar0/ZZU.Py)
-- [API 参考文档](https://illustar0.github.io/ZZU.Py)
+- [API 参考文档](reference/api.md)
 - [问题反馈](https://github.com/Illustar0/ZZU.Py/issues)
+

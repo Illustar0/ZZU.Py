@@ -1,3 +1,6 @@
+"""异常处理模块"""
+
+
 class ZZUError(Exception):
     """基类异常"""
 
@@ -38,4 +41,3 @@ class OperationError(ZZUError):
     """操作失败"""
 
     pass
-
