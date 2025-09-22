@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.4:
+
+v6.0.0-rc.4 (2025-09-22)
+========================
+
+🪲 Bug Fixes
+------------
+
+* Adjust pydantic dependency to >=2.11.7 (`dceb164`_)
+
+.. _dceb164: https://github.com/Illustar0/ZZU.Py/commit/dceb164dfac84b09ac4042d67df43fd0a3eff278
+
+
 .. _changelog-v6.0.0-rc.3:
 
 v6.0.0-rc.3 (2025-09-22)
