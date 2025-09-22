@@ -8,13 +8,15 @@ import time
 from typing import Final
 
 import httpx
-import numpy as np
 from loguru import logger
 
 from zzupy.app.interfaces import ICASClient
 from zzupy.exception import LoginError, NetworkError, ParsingError, NotLoggedInError
 from zzupy.models import Course, RoomOccupancyData, SemesterData
 from zzupy.utils import get_sign, require_auth
+
+ScheduleMatrix = list[list[Course | None]]
+DayCourses = list[Course | None]
 
 
 class SupwisdomClient:
@@ -110,7 +112,7 @@ class SupwisdomClient:
         self,
         start_date: str,
         semester_id: str | int = None,
-    ) -> np.ndarray:
+    ) -> ScheduleMatrix:
         """获取某一周课程表矩阵
 
         Args:
@@ -175,7 +177,9 @@ class SupwisdomClient:
             )
             courses_list = json.loads(courses_json)
 
-            schedule_matrix = np.full((7, 10), None, dtype=object)
+            schedule_matrix: ScheduleMatrix = [
+                [None for _ in range(10)] for _ in range(7)
+            ]
 
             # 预先解析周开始日期，避免重复解析
             week_start = datetime.datetime.strptime(start_date, "%Y-%m-%d")
@@ -196,9 +200,10 @@ class SupwisdomClient:
                     start_period = max(0, course.start_unit - 1)
                     end_period = min(10, course.end_unit)
 
-                    # 使用 numpy 切片批量填充，避免循环
+                    # 批量填充时间段
                     if start_period < end_period:
-                        schedule_matrix[day_index, start_period:end_period] = course
+                        for period in range(start_period, end_period):
+                            schedule_matrix[day_index][period] = course
 
             return schedule_matrix
 
@@ -217,15 +222,15 @@ class SupwisdomClient:
     @require_auth
     async def get_current_week_courses(
         self, semester_id: str | int = None
-    ) -> np.ndarray:
+    ) -> ScheduleMatrix:
         """获取本周课程表
 
         Args:
             semester_id: 学期ID
 
         Returns:
-            本周课程表矩阵，行=星期(0=周一...6=周日)，列=节次(0=第1节...9=第10节)，元素为Course对象或N
-            one
+            本周课程表矩阵，行=星期(0=周一...6=周日)，列=节次(0=第1节...9=第10节)，元素为Course对象或
+            None
         """
         today = datetime.datetime.now()
         monday = today - datetime.timedelta(days=today.weekday())
@@ -233,7 +238,7 @@ class SupwisdomClient:
         return await self.get_courses(monday_str, semester_id)
 
     @require_auth
-    async def get_today_courses(self, semester_id: str | int = None) -> np.ndarray:
+    async def get_today_courses(self, semester_id: str | int = None) -> DayCourses:
         """获取今日课程表
 
         Args:
