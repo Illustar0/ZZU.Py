@@ -3,7 +3,7 @@ name = "zzupy"
 version = "6.0.0-rc.1"
 description = "豫见郑大的 Python API 封装 / An API wrapper for Zhengzhou University Mobile Campus written in Python."
 authors = [{ name = "Illustar0", email = "me@illustar0.com" }]
-requires-python = "~=3.13.0"
+requires-python = ">=3.11"
 readme = "README.md"
 license = "MIT"
 dependencies = [
