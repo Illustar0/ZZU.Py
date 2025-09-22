@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.3:
+
+v6.0.0-rc.3 (2025-09-22)
+========================
+
+✨ Features
+-----------
+
+* Replace numpy arrays with native lists for schedule matrices (`3027474`_)
+
+.. _3027474: https://github.com/Illustar0/ZZU.Py/commit/30274744285aa2eff3a514863d0cee988e4f7ac5
+
+
 .. _changelog-v6.0.0-rc.2:
 
 v6.0.0-rc.2 (2025-09-22)
