@@ -177,23 +177,24 @@ class ECardClient:
 
     def _schedule_token_refresh(self) -> None:
         """安排token刷新定时器
-        
+
         每45分钟执行一次token刷新
         """
         if self._refresh_timer is not None:
             self._refresh_timer.cancel()
-        
+
         self._refresh_timer = threading.Timer(
-            self.TOKEN_REFRESH_INTERVAL, 
-            self._refresh_tokens
+            self.TOKEN_REFRESH_INTERVAL, self._refresh_tokens
         )
         self._refresh_timer.daemon = True
         self._refresh_timer.start()
-        logger.debug("已安排 token 刷新定时器，将在{}秒后执行", self.TOKEN_REFRESH_INTERVAL)
+        logger.debug(
+            "已安排 token 刷新定时器，将在{}秒后执行", self.TOKEN_REFRESH_INTERVAL
+        )
 
     def _refresh_tokens(self) -> None:
         """刷新tokens
-        
+
         重新执行login流程来更新tid和tokens
         """
         try:

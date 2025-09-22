@@ -215,7 +215,9 @@ class SupwisdomClient:
             raise NetworkError("网络连接异常") from exc
 
     @require_auth
-    async def get_current_week_courses(self, semester_id: str | int = None) -> np.ndarray:
+    async def get_current_week_courses(
+        self, semester_id: str | int = None
+    ) -> np.ndarray:
         """获取本周课程表
 
         Args:
@@ -247,7 +249,9 @@ class SupwisdomClient:
         return week_matrix[day_index]
 
     @require_auth
-    async def get_next_course_today(self, semester_id: str | int = None) -> Course | None:
+    async def get_next_course_today(
+        self, semester_id: str | int = None
+    ) -> Course | None:
         """获取当天的下一节课
 
         Args:

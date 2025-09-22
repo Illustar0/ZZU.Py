@@ -167,7 +167,9 @@ class CASClient(ICASClient):
 
         try:
             logger.debug("正在向 {} 发送登录请求...", self.LOGIN_URL)
-            response = await self._client.post(self.LOGIN_URL, params=params, headers=headers)
+            response = await self._client.post(
+                self.LOGIN_URL, params=params, headers=headers
+            )
             response.raise_for_status()
 
             logger.debug("/passwordLogin 请求响应体: {}", response.text)
