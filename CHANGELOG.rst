@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.5:
+
+v6.0.0-rc.5 (2025-09-22)
+========================
+
+🪲 Bug Fixes
+------------
+
+* Adjust cryptography dependency to >=45.0.3 (`83055db`_)
+
+.. _83055db: https://github.com/Illustar0/ZZU.Py/commit/83055db4670fe0bb2f4b5e3e9870b63715690847
+
+
 .. _changelog-v6.0.0-rc.4:
 
 v6.0.0-rc.4 (2025-09-22)
