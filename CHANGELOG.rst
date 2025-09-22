@@ -2,6 +2,31 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.2:
+
+v6.0.0-rc.2 (2025-09-22)
+========================
+
+🪲 Bug Fixes
+------------
+
+* Lower Python version requirement to >=3.11 (`534d42b`_)
+
+🧹 Chores
+---------
+
+* Update issue templates (`e85bc84`_)
+
+🎨 Code Style
+-------------
+
+* Format code with ruff (`a50705a`_)
+
+.. _534d42b: https://github.com/Illustar0/ZZU.Py/commit/534d42b53d43a7ae6a1876dc4ae300877c871d88
+.. _a50705a: https://github.com/Illustar0/ZZU.Py/commit/a50705acd4b70f819a6d53754b9cbd9aeb020e9f
+.. _e85bc84: https://github.com/Illustar0/ZZU.Py/commit/e85bc84087a03caf4cdd7dccd854509311d07245
+
+
 .. _changelog-v6.0.0-rc.1:
 
 v6.0.0-rc.1 (2025-09-21)
