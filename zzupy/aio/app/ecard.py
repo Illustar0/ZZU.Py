@@ -601,13 +601,13 @@ class ECardClient:
         self._logged_in = False
         logger.info("已登出校园卡系统")
 
-    @require_auth
     async def close(self) -> None:
         """清除 Cookie 和连接池"""
         logger.debug("正在关闭校园卡客户端")
         if self._refresh_timer is not None:
             self._refresh_timer.cancel()
             self._refresh_timer = None
-        self.logout()
+        if self._logged_in:
+            self.logout()
         await self._client.aclose()
         logger.info("校园卡客户端已关闭")

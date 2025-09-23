@@ -438,9 +438,9 @@ class SupwisdomClient:
         self._logged_in = False
         logger.debug("树维教务已登出")
 
-    @require_auth
     async def close(self) -> None:
         """清除 Cookie 和连接池"""
-        self.logout()
+        if self._logged_in:
+            self.logout()
         await self._client.aclose()
         logger.debug("树维教务连接池已关闭")
