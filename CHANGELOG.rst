@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.6:
+
+v6.0.0-rc.6 (2025-09-23)
+========================
+
+🪲 Bug Fixes
+------------
+
+* Prevent logout calls when not authenticated in close method (`26d7ef0`_)
+
+.. _26d7ef0: https://github.com/Illustar0/ZZU.Py/commit/26d7ef02a8f9af3c5f786b91adcc422a8c75be98
+
+
 .. _changelog-v6.0.0-rc.5:
 
 v6.0.0-rc.5 (2025-09-22)
