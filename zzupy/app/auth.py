@@ -2,6 +2,8 @@
 
 import base64
 import json
+import threading
+from datetime import datetime
 from typing import Final
 
 import httpx
@@ -46,6 +48,7 @@ class CASClient(ICASClient):
         self._user_token: str | None = None
         self._refresh_token: str | None = None
         self._logged_in: bool = False
+        self._refresh_timer: threading.Timer | None = None
 
     def __enter__(self) -> "CASClient":
         return self
@@ -78,32 +81,71 @@ class CASClient(ICASClient):
         """当前会话是否已登录"""
         return self._logged_in
 
-    def _validate_jwt(self) -> bool:
-        if self._user_token is None or self._refresh_token is None:
-            logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
-            return False
+    def _validate_jwt(self, pre_set_token: bool = False) -> bool:
+        if pre_set_token:
+            try:
+                user_token_plain: dict = jwt.decode(
+                    self._user_token, self._public_key, algorithms=self.JWT_ALGORITHMS
+                )
+                expire_date = datetime.fromtimestamp(user_token_plain.get("exp"))
+                now = datetime.now()
+                time_to_expire = (expire_date - now).total_seconds()
 
-        try:
-            jwt.decode(
-                self._user_token, self._public_key, algorithms=self.JWT_ALGORITHMS
-            )
-        except jwt.ExpiredSignatureError:
-            logger.error("userToken 已过期，将使用账密登录并更新 userToken")
-            return False
-        except jwt.InvalidTokenError:
-            logger.error("userToken 无效，将使用账密登录并更新 userToken")
-            return False
+                if time_to_expire <= 900:  # 提前 15 分钟
+                    logger.error(
+                        "userToken 即将过期或已过期，将使用账密登录并更新 userToken"
+                    )
+                    return False
 
-        try:
-            jwt.decode(
-                self._refresh_token, self._public_key, algorithms=self.JWT_ALGORITHMS
-            )
-        except jwt.ExpiredSignatureError:
-            logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
-            return False
-        except jwt.InvalidTokenError:
-            logger.error("refreshToken 无效，将使用账密登录并更新 refreshToken")
-            return False
+                # 在过期前 15 分钟自动刷新
+                refresh_delay = time_to_expire - 900
+                if refresh_delay > 0:
+                    self._refresh_timer = threading.Timer(
+                        refresh_delay,
+                        self.login,
+                        kwargs={"force_login": True},
+                    )
+                    self._refresh_timer.start()
+                    logger.debug(
+                        f"已设置自动刷新定时器，将在 {refresh_delay:.0f} 秒后刷新 Token"
+                    )
+
+            except jwt.InvalidTokenError:
+                logger.error("userToken 无效，将使用账密登录并更新 userToken")
+                return False
+
+            try:
+                jwt.decode(
+                    self._refresh_token,
+                    self._public_key,
+                    algorithms=self.JWT_ALGORITHMS,
+                )
+            except jwt.ExpiredSignatureError:
+                logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
+                return False
+            except jwt.InvalidTokenError:
+                logger.error("refreshToken 无效，将使用账密登录并更新 refreshToken")
+                return False
+        else:
+            try:
+                jwt.decode(
+                    self._user_token, self._public_key, algorithms=self.JWT_ALGORITHMS
+                )
+            except jwt.InvalidTokenError:
+                raise LoginError(
+                    "登录失败，下发的 userToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
+                )
+
+            try:
+                jwt.decode(
+                    self._refresh_token,
+                    self._public_key,
+                    algorithms=self.JWT_ALGORITHMS,
+                )
+            except jwt.InvalidTokenError:
+                raise LoginError(
+                    "登录失败，下发的 refreshToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
+                )
 
         logger.info("userToken 和 refreshToken 有效")
         return True
@@ -131,12 +173,15 @@ class CASClient(ICASClient):
         encoded_bytes = base64.b64encode(encrypted_bytes)
         return f"__RSA__{encoded_bytes.decode('utf-8')}"
 
-    def login(self) -> None:
+    def login(self, force_login: bool = False) -> None:
         """登录统一认证。
 
         成功后，[`userToken`][zzupy.app.auth.CASClient.user_token] 和 [`refreshToken`][zzupy.app.auth.CASClient.refresh_token] 会被存储在实例中.
 
         若 [`user_token`][zzupy.app.auth.CASClient.user_token] 和 [`refresh_token`][zzupy.app.auth.CASClient.refresh_token] 已通过 [`set_token`][zzupy.app.auth.CASClient.set_token] 设置且有效，则会跳过账密登录。
+
+        Args:
+            force_login: 强制使用账密登录
 
         Raises:
             LoginError: 如果登录失败
@@ -145,11 +190,16 @@ class CASClient(ICASClient):
         """
         if self._public_key is None:
             self._public_key = self._get_public_key()
-
-        if self._validate_jwt():
-            logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
-            self._logged_in = True
-            return
+        if not force_login:
+            if self._user_token is None or self._refresh_token is None:
+                logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
+            else:
+                if self._validate_jwt(True):
+                    logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
+                    self._logged_in = True
+                    return
+        else:
+            logger.info("强制使用账密登录")
 
         encrypted_account = self._encrypt_and_encode(self._account, self._public_key)
         encrypted_password = self._encrypt_and_encode(self._password, self._public_key)
@@ -183,6 +233,7 @@ class CASClient(ICASClient):
             token_data = data["data"]
             self._user_token = token_data["idToken"]
             self._refresh_token = token_data["refreshToken"]
+            self._validate_jwt()
             self._logged_in = True
 
             logger.info("统一认证登录成功")
@@ -204,6 +255,9 @@ class CASClient(ICASClient):
         self._client.headers.clear()
         self._user_token = None
         self._refresh_token = None
+        if self._refresh_timer is not None:
+            self._refresh_timer.cancel()
+            self._refresh_timer = None
         self._logged_in = False
 
     def close(self) -> None:

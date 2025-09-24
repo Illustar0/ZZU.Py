@@ -9,7 +9,7 @@ class ICASClient(ABC):
         pass
 
     @abstractmethod
-    def login(self) -> None:
+    def login(self, force_login: bool = False) -> None:
         pass
 
     @property
