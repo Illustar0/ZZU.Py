@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.7:
+
+v6.0.0-rc.7 (2025-09-27)
+========================
+
+✨ Features
+-----------
+
+* Add automatic token refresh and forced login support (`a51b609`_)
+
+.. _a51b609: https://github.com/Illustar0/ZZU.Py/commit/a51b6095d71079a6cad5aa9d293ed55ba490416f
+
+
 .. _changelog-v6.0.0-rc.6:
 
 v6.0.0-rc.6 (2025-09-23)

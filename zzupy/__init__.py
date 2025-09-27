@@ -7,5 +7,5 @@ from . import exception
 
 logger.disable(__name__)
 
-__version__ = "6.0.0-rc.6"
+__version__ = "6.0.0-rc.7"
 __all__ = ["aio", "app", "web", "exception"]
