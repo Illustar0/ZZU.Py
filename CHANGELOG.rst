@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.8:
+
+v6.0.0-rc.8 (2025-09-28)
+========================
+
+✨ Features
+-----------
+
+* Add pure‑Python RSA fallback and remove cryptography dependency (`ab1a6d1`_)
+
+.. _ab1a6d1: https://github.com/Illustar0/ZZU.Py/commit/ab1a6d1c7be2eb238f91510e48ff88724df34f58
+
+
 .. _changelog-v6.0.0-rc.7:
 
 v6.0.0-rc.7 (2025-09-27)
