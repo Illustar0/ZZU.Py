@@ -8,7 +8,6 @@ readme = "README.md"
 license = "MIT"
 dependencies = [
     "beautifulsoup4>=4.13.3",
-    "cryptography>=45.0.3",
     "gmalg>=1.0.6",
     "httpx>=0.28.1",
     "ifaddr>=0.2.0",
