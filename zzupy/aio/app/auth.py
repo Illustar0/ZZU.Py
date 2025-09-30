@@ -89,7 +89,7 @@ class CASClient(ICASClient):
         if pre_set_token:
             try:
                 user_token_plain: dict = jwt.decode(
-                    self._user_token, self._public_key, algorithms=self.JWT_ALGORITHMS
+                    self._user_token, options={"verify_signature": False}
                 )
                 expire_date = datetime.fromtimestamp(user_token_plain.get("exp"))
                 now = datetime.now()
