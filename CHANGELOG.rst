@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.0-rc.9:
+
+v6.0.0-rc.9 (2025-09-30)
+========================
+
+🪲 Bug Fixes
+------------
+
+* Decode pre-set JWT without signature verification to inspect claims (`4747562`_)
+
+.. _4747562: https://github.com/Illustar0/ZZU.Py/commit/47475621cf1fc50262138ca5b38e3b1574dff50a
+
+
 .. _changelog-v6.0.0-rc.8:
 
 v6.0.0-rc.8 (2025-09-28)
