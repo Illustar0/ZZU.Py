@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.1:
+
+v6.0.1 (2026-01-23)
+===================
+
+🪲 Bug Fixes
+------------
+
+* Handle edge cases for unusual devices (`05c5dd6`_)
+
+* Switch to AsyncHTTPTransport in async network client (`7ce4893`_)
+
+.. _05c5dd6: https://github.com/Illustar0/ZZU.Py/commit/05c5dd6ff9a318ea573e0789d8e9bd948ce1e873
+.. _7ce4893: https://github.com/Illustar0/ZZU.Py/commit/7ce489374a48574f73fc2eb3ddbffe3ea9c60fce
+
+
 .. _changelog-v6.0.0:
 
 v6.0.0 (2025-10-09)
