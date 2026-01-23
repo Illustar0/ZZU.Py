@@ -151,12 +151,12 @@ class EPortalClient:
             ]
 
             if self._bind_address in local_ips:
-                transport = httpx.HTTPTransport(local_address=bind_address)
+                transport = httpx.AsyncHTTPTransport(local_address=bind_address)
             else:
-                transport = httpx.HTTPTransport()
+                transport = httpx.AsyncHTTPTransport()
 
         else:
-            transport = httpx.HTTPTransport(local_address=bind_address)
+            transport = httpx.AsyncHTTPTransport(local_address=bind_address)
         self._client = httpx.AsyncClient(
             transport=transport,
         )
