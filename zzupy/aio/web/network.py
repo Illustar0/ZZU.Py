@@ -49,6 +49,11 @@ async def discover_portal_info() -> PortalInfo | None:
         query_params = parse_qs(parsed.query)
 
         user_ips = query_params.get("userip", [])
+
+        # 某些园区的奇怪设备
+        if not user_ips:
+            user_ips = query_params.get("wlanuserip", ["未知"])
+
         if not user_ips:
             raise ParsingError("无法从Portal URL获取用户IP")
         return user_ips[0]
@@ -94,7 +99,11 @@ async def discover_portal_info() -> PortalInfo | None:
             if str(response.url).startswith("https://"):
                 raise NetworkError("未被 MITM，请检查校园网是否已认证")
 
-            portal_url = _parse_portal_redirect(response.text)
+            if str(response.url) != "http://bilibili.com":
+                # 某些园区的奇怪设备
+                portal_url = str(response.url)
+            else:
+                portal_url = _parse_portal_redirect(response.text)
 
             user_ip = _extract_user_ip(portal_url)
 
