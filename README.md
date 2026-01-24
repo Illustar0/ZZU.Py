@@ -37,7 +37,7 @@ cas.login()
 
 with SupwisdomClient(cas) as client:
     # 获取本周课表
-    week_courses = client.get_week_courses()
+    week_courses = client.get_current_week_courses()
     print(week_courses)
 ```
 
