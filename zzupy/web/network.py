@@ -52,7 +52,7 @@ def discover_portal_info() -> PortalInfo | None:
 
         # 某些园区的奇怪设备
         if not user_ips:
-            user_ips = query_params.get("wlanuserip", ["未知"])
+            user_ips = query_params.get("wlanuserip", [])
 
         if not user_ips:
             raise ParsingError("无法从Portal URL获取用户IP")
