@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+.. _changelog-v6.0.2:
+
+v6.0.2 (2026-01-24)
+===================
+
+🪲 Bug Fixes
+------------
+
+* Remove default fallback value for ``wlanuserip`` (`f1be0fb`_)
+
+.. _f1be0fb: https://github.com/Illustar0/ZZU.Py/commit/f1be0fb6afd0459b00045f2db85f4297f92842a7
+
+
 .. _changelog-v6.0.1:
 
 v6.0.1 (2026-01-23)
