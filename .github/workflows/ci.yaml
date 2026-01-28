@@ -27,7 +27,7 @@ jobs:
           uv build
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: zzupy_ci_${{ github.sha }}
           path: dist/
