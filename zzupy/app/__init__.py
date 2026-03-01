@@ -2,10 +2,6 @@
 
 from .auth import CASClient
 from .ecard import ECardClient
-from .supwisdom import SupwisdomClient
+from .eas import UndergradEASClient
 
-__all__ = [
-    "CASClient",
-    "ECardClient",
-    "SupwisdomClient",
-]
+__all__ = ["CASClient", "ECardClient", "UndergradEASClient"]

@@ -109,6 +109,7 @@ class CASClient(ICASClient):
                         self.login,
                         kwargs={"force_login": True},
                     )
+                    self._refresh_timer.daemon = True
                     self._refresh_timer.start()
                     logger.debug(
                         f"已设置自动刷新定时器，将在 {refresh_delay:.0f} 秒后刷新 Token"

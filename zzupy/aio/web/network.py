@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
 from zzupy.exception import LoginError, ParsingError, NetworkError, NotLoggedInError
-from zzupy.models import AuthResult, OnlineDevice, PortalInfo
+from zzupy.model.network import AuthResult, OnlineDevice, PortalInfo
 from zzupy.utils import (
     get_local_ip,
     JsonPParser,
