@@ -51,7 +51,7 @@ class UndergradEASClient:
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
-        def request_logger(request):
+        async def request_logger(request):
             logger.trace(f">>> {request.method} {request.url}")
             logger.trace(f">>> Headers: {dict(request.headers)}")
             if request.content:
@@ -60,7 +60,7 @@ class UndergradEASClient:
                 except Exception:
                     logger.trace(">>> Body: (Binary)")
 
-        def response_logger(response):
+        async def response_logger(response):
             logger.trace(f"<<< Headers: {dict(response.headers)}")
 
         self._client = httpx.AsyncClient(
