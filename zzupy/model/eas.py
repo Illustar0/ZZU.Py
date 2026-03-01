@@ -5,7 +5,7 @@ from typing import Any, List
 
 from icalendar import Calendar
 from icalendar.cal import Event
-from pydantic import BaseModel, model_validator, ConfigDict, RootModel
+from pydantic import BaseModel, model_validator, ConfigDict, RootModel, Field
 from pydantic.alias_generators import to_camel
 from whenever import ZonedDateTime, Date, PlainDateTime, Instant
 
@@ -436,7 +436,7 @@ class TeachingWeek(BaseModel):
     DAYS: int = 7
     UNITS: int = 10
 
-    lessons: dict[tuple[int, int], Lesson] = {}
+    lessons: dict[tuple[int, int], Lesson] = Field(default_factory=dict)
     """内部存储：仅存储非空课程，key 为 (weekday, unit)，value 为 Lesson"""
 
     def _validate_index(self, weekday: int, unit: int) -> None:
@@ -596,7 +596,7 @@ class TeachingWeek(BaseModel):
 
 
 class TeachingWeeks(RootModel):
-    root: list[TeachingWeek] = []
+    root: list[TeachingWeek] = Field(default_factory=list)
 
     def __iter__(self):
         return iter(self.root)
