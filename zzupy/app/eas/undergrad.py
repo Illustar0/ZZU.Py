@@ -105,14 +105,14 @@ class UndergradEASClient:
         except httpx.HTTPStatusError as exc:
             logger.error(
                 "{}请求返回失败状态码: {}",
-                self.CURRENT_SEMESTER_URL,
+                self.USER_INFO_URL,
                 exc.response.status_code,
             )
             raise OperationError(
                 f"服务器返回错误状态 {exc.response.status_code}"
             ) from exc
         except (json.JSONDecodeError, KeyError) as exc:
-            logger.error("从 {} 响应中提取数据失败: {}", self.CURRENT_SEMESTER_URL, exc)
+            logger.error("从 {} 响应中提取数据失败: {}", self.USER_INFO_URL, exc)
             raise ParsingError("服务器响应格式不正确") from exc
         except httpx.RequestError as exc:
             logger.error("{} 请求失败: {}", self.USER_INFO_URL, exc)
