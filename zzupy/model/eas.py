@@ -36,7 +36,7 @@ class CultivateType(BaseModel):
     id: int
     name_zh: str
     """培养类型中文名"""
-    name_en: str | str = None
+    name_en: str | None = None
     """培养类型英文名"""
     code: str
     """培养类型编号"""
