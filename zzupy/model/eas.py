@@ -441,9 +441,9 @@ class TeachingWeek(BaseModel):
 
     def _validate_index(self, weekday: int, unit: int) -> None:
         if not (1 <= weekday <= self.DAYS):
-            raise ValueError(f"星期 {weekday} 超出范围 (1-{self.DAYS})")
+            raise IndexError(f"星期 {weekday} 超出范围 (1-{self.DAYS})")
         if not (1 <= unit <= self.UNITS):
-            raise ValueError(f"节次 {unit} 超出范围 (1-{self.UNITS})")
+            raise IndexError(f"节次 {unit} 超出范围 (1-{self.UNITS})")
 
     def set(self, weekday: int, unit: int, lesson: Lesson) -> None:
         """设置某天某节的课程
@@ -454,7 +454,7 @@ class TeachingWeek(BaseModel):
             lesson: 课程
 
         Raises:
-            ValueError: 如果 {weekday} 或 {unit} 超出范围
+            IndexError: 如果 {weekday} 或 {unit} 超出范围
         """
         self._validate_index(weekday, unit)
         self.lessons[(weekday, unit)] = lesson
@@ -470,7 +470,7 @@ class TeachingWeek(BaseModel):
             Lesson | None: 对应课程或 None
 
         Raises:
-            ValueError: 如果 {weekday} 或 {unit} 超出范围
+            IndexError: 如果 {weekday} 或 {unit} 超出范围
         """
         self._validate_index(weekday, unit)
         return self.lessons.get((weekday, unit))
@@ -485,7 +485,7 @@ class TeachingWeek(BaseModel):
             list[Lesson | None]: 由第 {weekday} 天中的第 {unit} 节课组成的列表
 
         Raises:
-            ValueError: 如果 {weekday} 超出范围
+            IndexError: 如果 {weekday} 超出范围
         """
         self._validate_index(weekday, 1)
         return [self.lessons.get((weekday, unit)) for unit in range(1, self.UNITS + 1)]
@@ -500,7 +500,7 @@ class TeachingWeek(BaseModel):
             list[Lesson | None]: 由 7 天中的第 {unit} 节课组成的列表
 
         Raises:
-            ValueError: 如果 {unit} 超出范围
+            IndexError: 如果 {unit} 超出范围
         """
         self._validate_index(1, unit)
         return [self.lessons.get((day, unit)) for day in range(1, self.DAYS + 1)]

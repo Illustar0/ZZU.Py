@@ -176,12 +176,12 @@ class UndergradEASClient:
         Raises:
             ParsingError: 如果响应解析失败
             NetworkError: 如果网络请求失败
-            ValueError: 如果教学周序数不正确
+            IndexError: 如果教学周序数不正确
             OperationError: 如果服务器发生异常
         """
         logger.info("尝试获取第 {} 教学周...", week)
         if week < 1:
-            raise ValueError("教学周序数不可小于 1")
+            raise IndexError("教学周序数不可小于 1")
         if semester_id is None:
             semester_id = self._current_semester_id
         return self.get_teaching_weeks(semester_id)[week - 1]
@@ -202,7 +202,7 @@ class UndergradEASClient:
         Raises:
             ParsingError: 如果响应解析失败
             NetworkError: 如果网络请求失败
-            ValueError: 如果教学周序数不正确
+            IndexError: 如果教学周序数不正确
             OperationError: 如果服务器发生异常
         """
         logger.info("尝试获取全部教学周...")
@@ -214,7 +214,7 @@ class UndergradEASClient:
                 week_indices = semester.week_indices
                 break
         else:
-            raise ValueError("semester_id 不存在！")
+            raise IndexError("semester_id 不存在！")
 
         url = f"{self.COURSE_URL}/{semester_id}"
         try:
