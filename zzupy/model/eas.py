@@ -326,11 +326,9 @@ class Schedule(BaseModel):
 
         try:
             schedule_date = Date.parse_iso(date_str)
-            data["date"] = schedule_date
         except Exception:
             return data
 
-        # 兼容小驼峰（外部输入）和蛇形（Python调用）的键名
         time_keys = [
             "startTime",
             "endTime",
@@ -706,24 +704,6 @@ class Semester(BaseModel):
     season: str
     week_indices: list[int]
     biz_types: None
-
-    @model_validator(mode="before")
-    @classmethod
-    def assemble_whenever_datetime(cls, data: dict) -> dict:
-        if not isinstance(data, dict):
-            return data
-
-        start_date_str = data.get("start_date")
-        end_date_str = data.get("end_date")
-        if not start_date_str and not end_date_str:
-            return data
-
-        try:
-            data["start_date"] = Date.parse_iso(start_date_str)
-            data["end_date"] = Date.parse_iso(end_date_str)
-        except Exception:
-            return data
-        return data
 
 
 class SemesterModel(BaseModel):
