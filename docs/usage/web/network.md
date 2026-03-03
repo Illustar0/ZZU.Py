@@ -68,7 +68,7 @@ except ParsingError as e:
 ```python title="手动IP绑定"
 # 手动指定绑定IP
 with EPortalClient(
-    "http://172.16.2.9",
+    "http://172.16.2.9:801",
     bind_address="192.168.1.100"
 ) as client:
     result = client.auth("your_account", "your_password")
@@ -83,7 +83,7 @@ with EPortalClient(
 # 路由器环境下使用强制绑定
 portal_info = discover_portal_info()
 with EPortalClient(
-    "http://172.16.2.9",
+    "http://172.16.2.9:801",
     bind_address=portal_info.user_ip,
     force_bind=True
 ) as client:
@@ -201,7 +201,7 @@ class AuthResult:
 
 Portal 配置信息模型：
 
-[:octicons-link-external-24: PortalInfo 完整文档][zzupy.models.PortalInfo]
+[:octicons-link-external-24: PortalInfo 完整文档][zzupy.model.network.PortalInfo]
 ```python
 class PortalInfo:
     auth_url: str           # 认证网页URL
@@ -213,7 +213,7 @@ class PortalInfo:
 
 在线设备信息模型：
 
-[:octicons-link-external-24: OnlineDevice 完整文档][zzupy.models.OnlineDevice]
+[:octicons-link-external-24: OnlineDevice 完整文档][zzupy.model.network.OnlineDevice]
 ```python
 class OnlineDevice:
     brasid: str         # BRAS ID

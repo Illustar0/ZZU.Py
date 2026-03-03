@@ -170,6 +170,18 @@ if cas.logged_in:
 
 所有认证功能都提供异步版本，位于 [`zzupy.aio.app.auth`][zzupy.aio.app.auth] 模块：
 
+```python title="异步用法"
+import asyncio
+from zzupy.aio.app import CASClient
+
+async def main():
+    cas = CASClient("your_account", "your_password")
+    await cas.login()
+    print(cas.logged_in)
+
+asyncio.run(main())
+```
+
 
 ## 错误处理 {#error-handling}
 

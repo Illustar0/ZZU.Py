@@ -67,7 +67,7 @@ with UndergradEASClient(cas) as client:
 
 ### 环境要求
 
-- Python >= 3.13
+- Python >= 3.11
 - 依赖管理：使用 uv
 
 ### 贡献代码
@@ -88,4 +88,3 @@ with UndergradEASClient(cas) as client:
 - [GitHub 仓库](https://github.com/Illustar0/ZZU.Py)
 - [API 参考文档](reference/api.md)
 - [问题反馈](https://github.com/Illustar0/ZZU.Py/issues)
-

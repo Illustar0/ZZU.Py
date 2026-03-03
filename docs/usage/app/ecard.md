@@ -228,7 +228,23 @@ for room_id, room_name in rooms.items():
 
 ## 异步支持 {#async-support}
 
-所有功能都提供异步版本，位于 [`zzupy.app.ecard`][zzupy.aio.app.ecard] 模块：
+所有功能都提供异步版本，位于 [`zzupy.aio.app.ecard`][zzupy.aio.app.ecard] 模块：
+
+```python title="异步用法"
+import asyncio
+from zzupy.aio.app import CASClient, ECardClient
+
+async def main():
+    cas = CASClient("your_account", "your_password")
+    await cas.login()
+
+    async with ECardClient(cas) as ecard:
+        await ecard.login()
+        balance = await ecard.get_balance()
+        print(balance)
+
+asyncio.run(main())
+```
 
 ## 错误处理 {#error-handling}
 
