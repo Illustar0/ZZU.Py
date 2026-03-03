@@ -12,7 +12,7 @@ ZZU.Py 是一个为郑州大学各个线上系统和相关服务提供 Python AP
 ## 特性
 
 - **统一认证系统 (CAS)** - 支持账密登录和 Token 认证
-- **智慧教务系统** - 获取课表、查询空教室
+- **本科教务系统** - 获取课表
 - **校园网络服务** - Portal 认证、设备管理、流量查询
 - **校园卡服务** - 余额查询、电费充值
 - **类型安全** - 基于 Pydantic 的数据模型验证
@@ -29,15 +29,15 @@ pip install zzupy --upgrade
 ### 基础使用
 
 ```python
-from zzupy.app import CASClient, SupwisdomClient
+from zzupy.app import CASClient, UndergradEASClient
 
 # CAS 认证
 cas = CASClient("Your account", "Your password")
 cas.login()
 
-with SupwisdomClient(cas) as client:
-    # 获取本周课表
-    week_courses = client.get_week_courses()
+with UndergradEASClient(cas) as client:
+    # 获取当前学期第一教学周课表
+    week_courses = client.get_teaching_week(1)
     print(week_courses)
 ```
 
@@ -48,7 +48,7 @@ with SupwisdomClient(cas) as client:
 提供基于移动端逆向的 API 封装：
 
 - **auth**: CAS 统一认证系统客户端
-- **supwisdom**: 智慧教务系统，支持课表查询、空教室查询
+- **eas**: 新版本科教务系统，支持课表查询、学期数据获取、iCalendar 导出
 - **ecard**: 校园卡服务，支持余额查询、电费充值
 - **interfaces**: 定义统一的客户端接口规范
 
