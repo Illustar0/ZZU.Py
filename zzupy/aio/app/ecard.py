@@ -1,8 +1,8 @@
 """一卡通"""
 
+import asyncio
 import base64
 import json
-import threading
 import time
 from typing import Final
 from urllib.parse import urlparse, parse_qs
@@ -60,7 +60,7 @@ class ECardClient:
         self._tid: str | None = None
         self._default_room: str | None = None
         self._logged_in: bool = False
-        self._refresh_timer: threading.Timer | None = None
+        self._refresh_task: asyncio.Task[None] | None = None
 
     def _require_access_token(self) -> str:
         access_token = self._access_token
@@ -155,6 +155,12 @@ class ECardClient:
         self._schedule_token_refresh()
         logger.info("校园卡系统登录成功")
 
+    def _cancel_token_refresh(self) -> None:
+        refresh_task = self._refresh_task
+        if refresh_task is not None:
+            refresh_task.cancel()
+            self._refresh_task = None
+
     async def _get_tokens(self) -> None:
         """获取 ecard access token
 
@@ -222,20 +228,28 @@ class ECardClient:
             ) from exc
 
     def _schedule_token_refresh(self) -> None:
-        """安排token刷新定时器
+        """安排 token 自动刷新任务
 
         每45分钟执行一次token刷新
         """
-        if self._refresh_timer is not None:
-            self._refresh_timer.cancel()
+        self._cancel_token_refresh()
 
-        self._refresh_timer = threading.Timer(
-            self.TOKEN_REFRESH_INTERVAL, self._refresh_tokens
-        )
-        self._refresh_timer.daemon = True
-        self._refresh_timer.start()
+        async def refresh_loop() -> None:
+            while self._logged_in:
+                try:
+                    await asyncio.sleep(self.TOKEN_REFRESH_INTERVAL)
+                except asyncio.CancelledError:
+                    logger.debug("token 自动刷新任务已取消")
+                    raise
+
+                try:
+                    await self._refresh_tokens()
+                except Exception as exc:
+                    logger.error("token 自动刷新失败: {}", exc)
+
+        self._refresh_task = asyncio.create_task(refresh_loop())
         logger.debug(
-            "已安排 token 刷新定时器，将在{}秒后执行", self.TOKEN_REFRESH_INTERVAL
+            "已安排 token 自动刷新任务，将在{}秒后执行", self.TOKEN_REFRESH_INTERVAL
         )
 
     async def _refresh_tokens(self) -> None:
@@ -243,16 +257,10 @@ class ECardClient:
 
         重新执行login流程来更新tid和tokens
         """
-        try:
-            logger.info("开始执行 token 自动刷新")
-            await self._get_tid()
-            await self._get_tokens()
-            self._schedule_token_refresh()  # 重新安排下次刷新
-            logger.info("token 自动刷新完成")
-        except Exception as exc:
-            logger.error("token 自动刷新失败: {}", exc)
-            # 如果刷新失败，仍然重新安排下次刷新
-            self._schedule_token_refresh()
+        logger.info("开始执行 token 自动刷新")
+        await self._get_tid()
+        await self._get_tokens()
+        logger.info("token 自动刷新完成")
 
     @require_auth
     async def get_default_room(self) -> str:
@@ -329,7 +337,7 @@ class ECardClient:
             payment_password: 支付密码
             amt: 充值金额
             room: 房间 ID 。格式应为 'areaid-buildingid--unitid-roomid'，可通过
-                [`get_room_dict()`][zzupy.app.ecard.ECardClient.get_room_dict] 获取
+                [`get_room_dict()`][zzupy.aio.app.ecard.ECardClient.get_room_dict] 获取
 
         Raises:
             InvalidArgumentError: 如果金额或房间参数不合法。
@@ -638,7 +646,7 @@ class ECardClient:
 
         Args:
             room: 房间 ID 。格式应为 'areaid-buildingid--unitid-roomid'，可通过
-                [`get_room_dict()`][zzupy.app.ecard.ECardClient.get_room_dict] 获取
+                [`get_room_dict()`][zzupy.aio.app.ecard.ECardClient.get_room_dict] 获取
 
         Returns:
             剩余电量
@@ -737,9 +745,7 @@ class ECardClient:
     def logout(self) -> None:
         """登出账户，清除 Cookie 但保留连接池"""
         logger.debug("正在登出校园卡系统")
-        if self._refresh_timer is not None:
-            self._refresh_timer.cancel()
-            self._refresh_timer = None
+        self._cancel_token_refresh()
         self._access_token = None
         self._refresh_token = None
         self._tid = None
@@ -751,9 +757,7 @@ class ECardClient:
     async def close(self) -> None:
         """清除 Cookie 和连接池"""
         logger.debug("正在关闭校园卡客户端")
-        if self._refresh_timer is not None:
-            self._refresh_timer.cancel()
-            self._refresh_timer = None
+        self._cancel_token_refresh()
         if self._logged_in:
             self.logout()
         await self._client.aclose()
