@@ -1,90 +1,85 @@
 # ZZU.Py
 
-豫见郑大的 Python API 封装
-
-## 概述
-
-ZZU.Py 是一个为郑州大学各个线上系统和相关服务提供 Python API 封装的库。它提供了简洁易用的接口来访问校园各类服务，包括移动应用 API、校园网络认证、一卡通服务等。
+`zzupy` 为郑州大学常见线上服务提供 Python 客户端，覆盖移动端、Web 端以及对应异步实现。
 
 !!! warning
-    研究生教务系统暂未适配
+    当前仅适配本科教务新系统，研究生教务暂未支持。
 
-## 特性
+## 你可以用它做什么
 
-- **统一认证系统 (CAS)** - 支持账密登录和 Token 认证
-- **本科教务系统** - 获取课表
-- **校园网络服务** - Portal 认证、设备管理、流量查询
-- **校园卡服务** - 余额查询、电费充值
-- **类型安全** - 基于 Pydantic 的数据模型验证
-- **异步支持** - 基于 httpx 的高性能网络请求
+- 使用 App 端 CAS 完成统一认证，支持账密登录和预置 Token
+- 查询新本科教务课表、学期列表、教学周序数，并导出 `.ics`
+- 查询校园卡余额、默认房间、电量并为宿舍充值电费
+- 在校园网环境下自动发现 Portal 参数并完成认证
+- 登录自助服务系统，查看在线设备并踢设备下线
+
+## 安装
+
+```bash
+pip install -U zzupy
+```
+
+要求：Python `>=3.11`
 
 ## 快速开始
 
-### 安装
-
-```bash
-pip install zzupy --upgrade
-```
-
-### 基础使用
+### CAS + 本科教务
 
 ```python
 from zzupy.app import CASClient, UndergradEASClient
 
-# CAS 认证
-cas = CASClient("Your account", "Your password")
+cas = CASClient("your_account", "your_password")
 cas.login()
 
-with UndergradEASClient(cas) as client:
-    # 获取当前学期第一教学周课表
-    week_courses = client.get_teaching_week(1)
-    print(week_courses)
+with UndergradEASClient(cas) as eas:
+    eas.login()
+    week = eas.get_teaching_week(week=1)
+    lesson = week.get(weekday=1, unit=1)
+    if lesson:
+        print(lesson.course.name_zh)
 ```
 
-### 核心模块
+### 校园网 Portal 认证
 
-#### `app` - 移动应用 API 抽象层
+```python
+from zzupy.web import EPortalClient, discover_portal_info
 
-提供基于移动端逆向的 API 封装：
+portal = discover_portal_info()
+with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as client:
+    result = client.auth("your_account", "your_password")
+    print(result.message)
+```
 
-- **auth**: CAS 统一认证系统客户端
-- **eas**: 新版本科教务系统，支持课表查询、学期数据获取、iCalendar 导出
-- **ecard**: 校园卡服务，支持余额查询、电费充值
-- **interfaces**: 定义统一的客户端接口规范
+## 模块结构
 
-#### `web` - Web API 客户端模块
+### `zzupy.app`
 
-提供基于 Web 端逆向的 API 封装：
+- `CASClient`：移动端统一认证
+- `UndergradEASClient`：新本科教务
+- `ECardClient`：校园一卡通
 
-- **network**: 校园网络服务，包含 Portal 认证和设备管理
+### `zzupy.web`
 
-#### `aio` - 各模块的异步实现
+- `discover_portal_info`：探测校园网 Portal 参数
+- `EPortalClient`：完成 Portal 认证
+- `SelfServiceSystem`：校园网设备管理
 
-提供以上模块的异步实现
+### `zzupy.aio`
 
+- 提供同步客户端的异步对应实现
 
-## 开发指南
+## 阅读建议
 
-### 环境要求
+- 如果你刚开始接入，先看 `Usage`
+- 如果你想确认方法签名和模型字段，直接看 `API`
+- 如果你在迁移旧教务接口，先看 `Usage -> 教务系统 -> 迁移指南`
 
-- Python >= 3.11
-- 依赖管理：使用 uv
+## 开发
 
-### 贡献代码
+项目使用 `uv` 管理环境，常用命令：
 
-欢迎提交 Issue 和 Pull Request。在贡献代码前，请确保：
-
-1. 代码符合项目风格规范
-2. 添加必要的类型注解
-3. 编写相应的文档字符串
-4. 测试通过
-
-## 许可证
-
-本项目使用 MIT 许可证。详见 [LICENSE](https://github.com/Illustar0/ZZU.Py/blob/main/LICENSE) 文件。
-
-## 相关链接
-
-- [GitHub 仓库](https://github.com/Illustar0/ZZU.Py)
-- [API 参考文档](reference/api.md)
-- [问题反馈](https://github.com/Illustar0/ZZU.Py/issues)
+```bash
+uv sync
+ruff check
+uv build
+```

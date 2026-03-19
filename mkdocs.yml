@@ -1,5 +1,5 @@
 site_name: "ZZU.Py 文档"
-site_description: "A Python handler for mkdocstrings."
+site_description: "郑州大学常用线上服务的 Python API 封装文档"
 site_url: "https://illustar0.github.io/ZZU.Py/"
 repo_url: "https://github.com/Illustar0/ZZU.Py"
 repo_name: "Illustar0/ZZU.Py"
@@ -169,7 +169,6 @@ plugins:
     type: timeago
 - minify:
     minify_html: true
-
 
 
 
