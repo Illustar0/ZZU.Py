@@ -173,8 +173,8 @@ class JsonPParser:
 
     def __init__(self, text: str):
         self.text = text
-        self._callback = None
-        self._data = None
+        self._callback: str | None = None
+        self._data: str | None = None
         self._parse()
 
     def _parse(self):
@@ -187,10 +187,14 @@ class JsonPParser:
 
     @property
     def callback(self) -> str:
+        if self._callback is None:
+            raise ValueError("callback 尚未解析")
         return self._callback
 
     @property
     def data(self) -> str:
+        if self._data is None:
+            raise ValueError("data 尚未解析")
         return self._data
 
 

@@ -9,14 +9,20 @@ from urllib.parse import urlparse, parse_qs
 
 import gmalg
 import httpx
-from loguru import logger
 
 from zzupy.app.interfaces import ICASClient
 from zzupy.exception import (
+    InvalidArgumentError,
     NetworkError,
+    NotLoggedInError,
     OperationError,
     ParsingError,
-    NotLoggedInError,
+)
+from zzupy.logging import (
+    build_http_event_hooks,
+    log_http_headers,
+    log_http_response_body,
+    logger,
 )
 from zzupy.utils import sm4_decrypt_ecb, require_auth
 
@@ -45,7 +51,7 @@ class ECardClient:
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
-        self._client = httpx.Client()
+        self._client = httpx.Client(event_hooks=build_http_event_hooks())
         self._cas_client = cas_client
         self._access_token: str | None = None
         self._refresh_token: str | None = None
@@ -53,6 +59,18 @@ class ECardClient:
         self._default_room: str | None = None
         self._logged_in: bool = False
         self._refresh_timer: threading.Timer | None = None
+
+    def _require_access_token(self) -> str:
+        access_token = self._access_token
+        if access_token is None:
+            raise NotLoggedInError("校园卡 accessToken 不存在")
+        return access_token
+
+    def _require_user_token(self) -> str:
+        user_token = self._cas_client.user_token
+        if user_token is None:
+            raise NotLoggedInError("CASClient 缺少 userToken")
+        return user_token
 
     def __enter__(self) -> "ECardClient":
         return self
@@ -64,8 +82,8 @@ class ECardClient:
         """获取 tid
 
         Raises:
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
         params = {
             "host": "11",
@@ -81,7 +99,9 @@ class ECardClient:
                 follow_redirects=False,
             )
 
-            logger.debug("/auth/host/open 请求响应头: {}", response.headers)
+            log_http_headers(
+                "/auth/host/open 请求响应头", response.headers, level="DEBUG"
+            )
 
             if "location" not in response.headers:
                 logger.error("响应中缺少 location 头")
@@ -99,23 +119,32 @@ class ECardClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("获取 tid 请求返回失败状态码: {}", exc.response.status_code)
-            raise NetworkError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise NetworkError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.TID_URL},
             ) from exc
-        except (KeyError, IndexError) as exc:
+        except (KeyError, IndexError, TypeError) as exc:
             logger.error("从响应中提取 tid 失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.TID_URL},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("获取 tid 网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.TID_URL},
+            ) from exc
 
     def login(self) -> None:
         """登录到校园卡系统
 
         Raises:
-            LoginError: 如果登录失败
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
         logger.debug("开始登录校园卡系统")
         self._get_tid()
@@ -128,8 +157,8 @@ class ECardClient:
         """获取 ecard access token
 
         Raises:
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
         if not self._tid:
             logger.error("尝试获取 token 但 tid 未设置")
@@ -145,7 +174,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/auth/getToken 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.TOKEN_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -165,15 +199,25 @@ class ECardClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("获取 token 请求返回失败状态码: {}", exc.response.status_code)
-            raise NetworkError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise NetworkError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.TOKEN_URL},
             ) from exc
-        except (json.JSONDecodeError, KeyError) as exc:
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
             logger.error("从 /auth/getToken 响应中提取 token 失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.TOKEN_URL},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("获取 token 网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.TOKEN_URL},
+            ) from exc
 
     def _schedule_token_refresh(self) -> None:
         """安排token刷新定时器
@@ -216,14 +260,14 @@ class ECardClient:
             默认的房间
 
         Raises:
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
 
         if self._default_room is not None:
             return self._default_room
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
         data = {"utilityType": "electric"}
 
         try:
@@ -235,7 +279,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/config 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.CONFIG_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -250,15 +299,25 @@ class ECardClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("获取默认房间请求返回失败状态码: {}", exc.response.status_code)
-            raise NetworkError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise NetworkError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.CONFIG_URL},
             ) from exc
-        except (json.JSONDecodeError, KeyError) as exc:
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
             logger.error("从 /utilities/config 响应中提取房间信息失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.CONFIG_URL},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("获取默认房间网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.CONFIG_URL},
+            ) from exc
 
     @require_auth
     def recharge_energy(self, payment_password: str, amt: int, room: str) -> None:
@@ -271,18 +330,19 @@ class ECardClient:
                 [`get_room_dict()`][zzupy.app.ecard.ECardClient.get_room_dict] 获取
 
         Raises:
-            OperationError: 如果充值失败
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            InvalidArgumentError: 如果金额或房间参数不合法。
+            OperationError: 如果充值失败。
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
 
         if amt <= 0:
             logger.error("充值金额必须大于0")
-            raise ValueError("充值金额必须大于0")
+            raise InvalidArgumentError("充值金额必须大于 0", context={"amt": amt})
 
         logger.debug("准备为房间 {} 充值 {} 元", room, amt)
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
 
         try:
             # 获取加密信息
@@ -315,7 +375,10 @@ class ECardClient:
                 level = room.split("--")[1].split("-")[0]
             except (IndexError, ValueError) as exc:
                 logger.error("房间格式不正确: {}", room)
-                raise ValueError(f"房间格式不正确: {room}") from exc
+                raise InvalidArgumentError(
+                    f"房间格式不正确: {room}",
+                    context={"room": room},
+                ) from exc
 
             # 构建请求体
             json_data = {
@@ -349,7 +412,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/pay 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.PAY_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
             if response_data.get("success") is False:
@@ -361,15 +429,25 @@ class ECardClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("充值请求返回失败状态码: {}", exc.response.status_code)
-            raise NetworkError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise NetworkError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.PAY_URL, "room": room},
             ) from exc
-        except (json.JSONDecodeError, KeyError) as exc:
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
             logger.error("从充值响应中提取数据失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.PAY_URL, "room": room},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("充值网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.PAY_URL, "room": room},
+            ) from exc
 
     @require_auth
     def get_balance(self) -> float:
@@ -379,10 +457,10 @@ class ECardClient:
             校园卡余额
 
         Raises:
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
-        headers = {"X-Id-Token": self._cas_client.user_token}
+        headers = {"X-Id-Token": self._require_user_token()}
 
         try:
             logger.debug("正在向 {} 发送请求获取校园卡余额...", self.BALANCE_URL)
@@ -392,7 +470,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/get-person-info-card-list 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.BALANCE_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -406,15 +489,31 @@ class ECardClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("获取余额请求返回失败状态码: {}", exc.response.status_code)
-            raise NetworkError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise NetworkError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.BALANCE_URL},
             ) from exc
-        except (json.JSONDecodeError, KeyError, IndexError, ValueError) as exc:
+        except (
+            json.JSONDecodeError,
+            KeyError,
+            IndexError,
+            TypeError,
+            ValueError,
+        ) as exc:
             logger.error("从余额响应中提取数据失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.BALANCE_URL},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("获取余额网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.BALANCE_URL},
+            ) from exc
 
     @require_auth
     def get_room_dict(self, room_id: str) -> dict:
@@ -427,9 +526,9 @@ class ECardClient:
             对应的字典
 
         Raises:
-            ValueError: 如果参数格式不正确
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            InvalidArgumentError: 如果参数格式不正确。
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
 
         logger.debug("正在获取房间列表，room_id: {}", room_id)
@@ -454,12 +553,18 @@ class ECardClient:
                 location_type = "room"
             except (IndexError, ValueError) as exc:
                 logger.error("房间ID格式不正确: {}", room_id)
-                raise ValueError(f"房间ID格式不正确: {room_id}") from exc
+                raise InvalidArgumentError(
+                    f"房间ID格式不正确: {room_id}",
+                    context={"room_id": room_id},
+                ) from exc
         else:
             logger.error("房间ID格式不合法: {}", room_id)
-            raise ValueError(f"房间ID格式不合法: {room_id}")
+            raise InvalidArgumentError(
+                f"房间ID格式不合法: {room_id}",
+                context={"room_id": room_id},
+            )
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
         data = {
             "utilityType": "electric",
             "locationType": location_type,
@@ -481,7 +586,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/location 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.LOCATION_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -500,15 +610,25 @@ class ECardClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("获取房间列表请求返回失败状态码: {}", exc.response.status_code)
-            raise NetworkError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise NetworkError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.LOCATION_URL, "room_id": room_id},
             ) from exc
-        except (json.JSONDecodeError, KeyError) as exc:
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
             logger.error("从房间列表响应中提取数据失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.LOCATION_URL, "room_id": room_id},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("获取房间列表网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.LOCATION_URL, "room_id": room_id},
+            ) from exc
 
     @require_auth
     def get_remaining_energy(self, room: str | None = None) -> float:
@@ -522,8 +642,9 @@ class ECardClient:
             剩余电量
 
         Raises:
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            InvalidArgumentError: 如果房间参数不合法。
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
         room = self.get_default_room() if room is None else room
         logger.debug("正在获取房间 {} 的剩余电量", room)
@@ -534,9 +655,12 @@ class ECardClient:
             level = room.split("--")[1].split("-")[0]
         except (IndexError, ValueError) as exc:
             logger.error("房间格式不正确: {}", room)
-            raise ValueError(f"房间格式不正确: {room}") from exc
+            raise InvalidArgumentError(
+                f"房间格式不正确: {room}",
+                context={"room": room},
+            ) from exc
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
         data = {
             "utilityType": "electric",
             "bigArea": "",
@@ -557,7 +681,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/account 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.ACCOUNT_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -576,15 +705,31 @@ class ECardClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("获取剩余电量请求返回失败状态码: {}", exc.response.status_code)
-            raise NetworkError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise NetworkError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.ACCOUNT_URL, "room": room},
             ) from exc
-        except (json.JSONDecodeError, KeyError, IndexError, ValueError) as exc:
+        except (
+            json.JSONDecodeError,
+            KeyError,
+            IndexError,
+            TypeError,
+            ValueError,
+        ) as exc:
             logger.error("从剩余电量响应中提取数据失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.ACCOUNT_URL, "room": room},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("获取剩余电量网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.ACCOUNT_URL, "room": room},
+            ) from exc
 
     @require_auth
     def logout(self) -> None:

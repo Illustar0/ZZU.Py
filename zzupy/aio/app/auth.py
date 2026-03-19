@@ -9,16 +9,10 @@ from typing import Final
 import httpx
 import jwt
 
-try:
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import padding
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-except ImportError:
-    from zzupy.crypto import RSAPublicKey, padding, serialization
-from loguru import logger
-
-from zzupy.app.interfaces import ICASClient
+from zzupy.aio.app.interfaces import ICASClient
+from zzupy.crypto import RSAPublicKey, padding, serialization
 from zzupy.exception import LoginError, ParsingError, NetworkError
+from zzupy.logging import build_http_event_hooks, log_http_response_body, logger
 from zzupy.utils import require_auth
 
 
@@ -45,10 +39,12 @@ class CASClient(ICASClient):
             account: 账号
             password: 密码
         """
-        self._client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient(
+            event_hooks=build_http_event_hooks(async_client=True)
+        )
         self._account = account
         self._password = password
-        self._public_key = None
+        self._public_key: RSAPublicKey | None = None
         self._user_token: str | None = None
         self._refresh_token: str | None = None
         self._logged_in: bool = False
@@ -64,8 +60,8 @@ class CASClient(ICASClient):
         """设置统一认证 Token。
 
         Args:
-            user_token: `userToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`user_token`][zzupy.app.auth.CASClient.user_token] 获取
-            refresh_token: `refreshToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`refresh_token`][zzupy.app.auth.CASClient.refresh_token] 获取
+            user_token: `userToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`user_token`][zzupy.aio.app.auth.CASClient.user_token] 获取
+            refresh_token: `refreshToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`refresh_token`][zzupy.aio.app.auth.CASClient.refresh_token] 获取
         """
         self._user_token = user_token
         self._refresh_token = refresh_token
@@ -86,10 +82,17 @@ class CASClient(ICASClient):
         return self._logged_in
 
     def _validate_jwt(self, pre_set_token: bool = False) -> bool:
+        user_token = self._user_token
+        refresh_token = self._refresh_token
+        if user_token is None or refresh_token is None:
+            if pre_set_token:
+                return False
+            raise LoginError("登录失败，认证服务未返回完整 Token。")
+
         if pre_set_token:
             try:
                 user_token_plain: dict = jwt.decode(
-                    self._user_token, options={"verify_signature": False}
+                    user_token, options={"verify_signature": False}
                 )
                 expire_date = datetime.fromtimestamp(user_token_plain.get("exp"))
                 now = datetime.now()
@@ -119,7 +122,7 @@ class CASClient(ICASClient):
                 return False
 
             try:
-                jwt.decode(self._refresh_token, options={"verify_signature": False})
+                jwt.decode(refresh_token, options={"verify_signature": False})
             except jwt.ExpiredSignatureError:
                 logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
                 return False
@@ -128,14 +131,14 @@ class CASClient(ICASClient):
                 return False
         else:
             try:
-                jwt.decode(self._user_token, options={"verify_signature": False})
+                jwt.decode(user_token, options={"verify_signature": False})
             except jwt.InvalidTokenError:
                 raise LoginError(
                     "登录失败，下发的 userToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
                 )
 
             try:
-                jwt.decode(self._refresh_token, options={"verify_signature": False})
+                jwt.decode(refresh_token, options={"verify_signature": False})
             except jwt.InvalidTokenError:
                 raise LoginError(
                     "登录失败，下发的 refreshToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
@@ -144,7 +147,7 @@ class CASClient(ICASClient):
         logger.info("userToken 和 refreshToken 有效")
         return True
 
-    async def _get_public_key(self):
+    async def _get_public_key(self) -> RSAPublicKey:
         """从 CAS 服务器获取 RSA 公钥。"""
         logger.debug("正在从 {} 获取公钥...", self.PUBLIC_KEY_URL)
         headers = {"User-Agent": "okhttp/3.12.1"}
@@ -155,13 +158,21 @@ class CASClient(ICASClient):
             return serialization.load_pem_public_key(public_key_pem)
         except httpx.RequestError as exc:
             logger.error("获取公钥失败，网络请求异常: {}", exc)
-            raise NetworkError("获取公钥失败，无法连接到认证服务器。") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "获取公钥失败，无法连接到认证服务器。",
+                context={"url": self.PUBLIC_KEY_URL},
+            ) from exc
         except Exception as exc:
             logger.error("解析公钥失败: {}", exc)
-            raise ParsingError("认证服务公钥格式无效") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "认证服务公钥格式无效",
+                context={"url": self.PUBLIC_KEY_URL},
+            ) from exc
 
     @staticmethod
-    def _encrypt_and_encode(data: str, public_key) -> str:
+    def _encrypt_and_encode(data: str, public_key: RSAPublicKey) -> str:
         """使用公钥加密数据，进行 Base64 编码，并添加 '__RSA__' 前缀。"""
         encrypted_bytes = public_key.encrypt(data.encode("utf-8"), padding.PKCS1v15())
         encoded_bytes = base64.b64encode(encrypted_bytes)
@@ -170,17 +181,17 @@ class CASClient(ICASClient):
     async def login(self, force_login: bool = False) -> None:
         """登录统一认证。
 
-        成功后，[`userToken`][zzupy.app.auth.CASClient.user_token] 和 [`refreshToken`][zzupy.app.auth.CASClient.refresh_token] 会被存储在实例中.
+        成功后，[`userToken`][zzupy.aio.app.auth.CASClient.user_token] 和 [`refreshToken`][zzupy.aio.app.auth.CASClient.refresh_token] 会被存储在实例中.
 
-        若 [`user_token`][zzupy.app.auth.CASClient.user_token] 和 [`refresh_token`][zzupy.app.auth.CASClient.refresh_token] 已通过 [`set_token`][zzupy.app.auth.CASClient.set_token] 设置且有效，则会跳过账密登录。
+        若 [`user_token`][zzupy.aio.app.auth.CASClient.user_token] 和 [`refresh_token`][zzupy.aio.app.auth.CASClient.refresh_token] 已通过 [`set_token`][zzupy.aio.app.auth.CASClient.set_token] 设置且有效，则会跳过账密登录。
 
         Args:
             force_login: 强制使用账密登录
 
         Raises:
-            LoginError: 如果登录失败
-            ParsingError: 如果服务器响应无法解析
-            NetworkError: 如果出现网络错误
+            LoginError: 如果登录失败。
+            ParsingError: 如果服务器响应无法解析。
+            NetworkError: 如果出现网络错误。
         """
         if self._public_key is None:
             self._public_key = await self._get_public_key()
@@ -217,7 +228,12 @@ class CASClient(ICASClient):
             )
             response.raise_for_status()
 
-            logger.debug("/passwordLogin 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.LOGIN_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             data = response.json()
 
@@ -236,13 +252,25 @@ class CASClient(ICASClient):
 
         except httpx.HTTPStatusError as exc:
             logger.error("登录请求返回失败状态码: {}", exc.response.status_code)
-            raise LoginError(f"服务器返回错误状态 {exc.response.status_code}") from exc
-        except (json.JSONDecodeError, KeyError) as exc:
+            raise LoginError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.LOGIN_URL},
+            ) from exc
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
             logger.error("从 /passwordLogin 响应中提取 token 失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.LOGIN_URL},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("登录网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.LOGIN_URL},
+            ) from exc
 
     @require_auth
     def logout(self) -> None:
