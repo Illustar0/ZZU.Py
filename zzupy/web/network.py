@@ -30,14 +30,14 @@ from zzupy.utils import (
 )
 
 
-def discover_portal_info() -> PortalInfo | None:
+def discover_portal_info() -> PortalInfo:
     """自动发现校园网Portal认证信息
 
     Returns:
-        PortalInfo | None: Portal信息，如果未检测到则返回None
+        PortalInfo: Portal信息
 
     Raises:
-        NetworkError: 如果网络错误或校园网已认证
+        NetworkError: 如果网络错误，或当前环境无法检测到 Portal 信息
         ParsingError: 如果响应格式异常
     """
 
@@ -446,6 +446,9 @@ class SelfServiceSystem:
         self._logged_in = False
 
     def close(self):
-        if self._logged_in:
-            self.logout()
-        self._client.close()
+        try:
+            if self._logged_in:
+                self.logout()
+        finally:
+            self._logged_in = False
+            self._client.close()

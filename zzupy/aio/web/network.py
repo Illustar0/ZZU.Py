@@ -30,14 +30,14 @@ from zzupy.utils import (
 )
 
 
-async def discover_portal_info() -> PortalInfo | None:
+async def discover_portal_info() -> PortalInfo:
     """自动发现校园网Portal认证信息
 
     Returns:
-        PortalInfo | None: Portal信息，如果未检测到则返回None
+        PortalInfo: Portal信息
 
     Raises:
-        NetworkError: 如果网络错误或校园网已认证
+        NetworkError: 如果网络错误，或当前环境无法检测到 Portal 信息
         ParsingError: 如果响应格式异常
     """
 
@@ -183,7 +183,7 @@ class EPortalClient:
         password: str,
         encrypt: bool = False,
     ) -> AuthResult:
-        """[`auth()`][zzupy.web.EPortalClient.auth] 的底层实现，允许完全自定义账户
+        """[`auth()`][zzupy.aio.web.EPortalClient.auth] 的底层实现，允许完全自定义账户
 
         Args:
             account: 账户
@@ -447,6 +447,9 @@ class SelfServiceSystem:
         self._logged_in = False
 
     async def close(self):
-        if self._logged_in:
-            await self.logout()
-        await self._client.aclose()
+        try:
+            if self._logged_in:
+                await self.logout()
+        finally:
+            self._logged_in = False
+            await self._client.aclose()
