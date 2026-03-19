@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+
 class OnlineDevice(BaseModel):
     """在线设备信息"""
 
@@ -32,6 +33,7 @@ class OnlineDevice(BaseModel):
     def dump_json(self, indent: Optional[int] = None) -> str:
         """格式化为JSON字符串"""
         return json.dumps(self.model_dump(), ensure_ascii=False, indent=indent)
+
 
 class AuthResult(BaseModel):
     """Portal 认证结果"""
