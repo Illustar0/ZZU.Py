@@ -151,11 +151,12 @@ asyncio.run(main())
 
 常见异常：
 
+- `ZZUError`：所有项目异常的基类，带 `context` 可用于定位请求上下文
 - `NotLoggedInError`：CAS 未登录，或一卡通客户端未完成 `login()`
 - `NetworkError`：网络请求失败
 - `ParsingError`：服务端响应结构变化
 - `OperationError`：充值等操作被服务端拒绝
-- `ValueError`：房间 ID 或金额参数不合法
+- `InvalidArgumentError`：房间 ID、房间格式或金额参数不合法
 
 ## 注意事项
 
