@@ -9,7 +9,6 @@ from urllib.parse import urlparse, parse_qs
 
 import gmalg
 import httpx
-from loguru import logger
 
 from zzupy.aio.app.interfaces import ICASClient
 from zzupy.exception import (
@@ -18,6 +17,12 @@ from zzupy.exception import (
     NotLoggedInError,
     OperationError,
     ParsingError,
+)
+from zzupy.logging import (
+    build_http_event_hooks,
+    log_http_headers,
+    log_http_response_body,
+    logger,
 )
 from zzupy.utils import sm4_decrypt_ecb, require_auth
 
@@ -46,7 +51,9 @@ class ECardClient:
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
-        self._client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient(
+            event_hooks=build_http_event_hooks(async_client=True)
+        )
         self._cas_client = cas_client
         self._access_token: str | None = None
         self._refresh_token: str | None = None
@@ -94,7 +101,9 @@ class ECardClient:
                 follow_redirects=False,
             )
 
-            logger.debug("/auth/host/open 请求响应头: {}", response.headers)
+            log_http_headers(
+                "/auth/host/open 请求响应头", response.headers, level="DEBUG"
+            )
 
             if "location" not in response.headers:
                 logger.error("响应中缺少 location 头")
@@ -167,7 +176,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/auth/getToken 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.TOKEN_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -267,7 +281,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/config 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.CONFIG_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -395,7 +414,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/pay 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.PAY_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
             if response_data.get("success") is False:
@@ -448,7 +472,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/get-person-info-card-list 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.BALANCE_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -559,7 +588,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/location 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.LOCATION_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 
@@ -649,7 +683,12 @@ class ECardClient:
             )
             response.raise_for_status()
 
-            logger.debug("/utilities/account 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.ACCOUNT_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             response_data = response.json()
 

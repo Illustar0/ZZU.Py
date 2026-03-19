@@ -24,8 +24,9 @@ assignees: ''
 如果适用，请附上日志以帮助解释您的问题。
 ```python
 # 启用 Debug 日志
-from loguru import logger
-logger.enable("zzupy")
+from zzupy.logging import configure_logging
+
+configure_logging(level="DEBUG")
 ```
 
 

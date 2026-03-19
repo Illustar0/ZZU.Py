@@ -1,5 +1,5 @@
-from loguru import logger
-
+from .logging import logger
+from . import logging
 from . import aio
 from . import app
 from . import web
@@ -8,4 +8,4 @@ from . import exception
 logger.disable(__name__)
 
 __version__ = "6.0.2"
-__all__ = ["aio", "app", "web", "exception"]
+__all__ = ["aio", "app", "web", "exception", "logging"]

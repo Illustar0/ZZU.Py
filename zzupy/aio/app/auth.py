@@ -8,11 +8,11 @@ from typing import Final
 
 import httpx
 import jwt
-from loguru import logger
 
 from zzupy.aio.app.interfaces import ICASClient
 from zzupy.crypto import RSAPublicKey, padding, serialization
 from zzupy.exception import LoginError, ParsingError, NetworkError
+from zzupy.logging import build_http_event_hooks, log_http_response_body, logger
 from zzupy.utils import require_auth
 
 
@@ -39,7 +39,9 @@ class CASClient(ICASClient):
             account: 账号
             password: 密码
         """
-        self._client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient(
+            event_hooks=build_http_event_hooks(async_client=True)
+        )
         self._account = account
         self._password = password
         self._public_key: RSAPublicKey | None = None
@@ -226,7 +228,12 @@ class CASClient(ICASClient):
             )
             response.raise_for_status()
 
-            logger.debug("/passwordLogin 请求响应体: {}", response.text)
+            log_http_response_body(
+                self.LOGIN_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+                level="DEBUG",
+            )
 
             data = response.json()
 
