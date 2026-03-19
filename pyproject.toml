@@ -20,11 +20,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ci = [
-    "ruff>=0.13.1",
+develop = [
+    "ruff>=0.14.13",
+    "ty>=0.0.23",
+    "pre-commit>=4.5.1",
 ]
 
-docs =[
+docs = [
     "markdown-callouts>=0.4.0",
     "markdown-exec>=1.11.0",
     "mkdocs-git-revision-date-localized-plugin>=1.4.7",
