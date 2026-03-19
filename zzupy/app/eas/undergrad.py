@@ -49,7 +49,6 @@ class UndergradEASClient:
     )
 
     def __init__(self, cas_client: ICASClient):
-
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
@@ -69,9 +68,17 @@ class UndergradEASClient:
             event_hooks={"request": [request_logger], "response": [response_logger]}
         )
         self._cas_client = cas_client
-        self._client.cookies.set("userToken", cas_client.user_token, ".zzu.edu.cn", "/")
+        self._client.cookies.set(
+            "userToken", self._require_user_token(), ".zzu.edu.cn", "/"
+        )
         self._logged_in = False
         self._current_semester_id: int | None = None
+
+    def _require_user_token(self) -> str:
+        user_token = self._cas_client.user_token
+        if user_token is None:
+            raise NotLoggedInError("CASClient 缺少 userToken")
+        return user_token
 
     def __enter__(self) -> "UndergradEASClient":
         return self
@@ -90,7 +97,7 @@ class UndergradEASClient:
         logger.info("尝试从本科教务系统获取用户信息...")
 
         try:
-            headers = {"Authorization": self._cas_client.user_token}
+            headers = {"Authorization": self._require_user_token()}
             response = self._client.get(
                 self.USER_INFO_URL,
                 headers=headers,
@@ -139,7 +146,7 @@ class UndergradEASClient:
         logger.info("尝试获取当前学期...")
         url = f"{self.CURRENT_SEMESTER_URL}"
         try:
-            headers = {"Authorization": self._cas_client.user_token}
+            headers = {"Authorization": self._require_user_token()}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
             logger.trace("{} 请求响应体: {}", url, response.text)
@@ -253,7 +260,7 @@ class UndergradEASClient:
 
         url = f"{self.COURSE_URL}/{semester_id}"
         try:
-            headers = {"Authorization": self._cas_client.user_token}
+            headers = {"Authorization": self._require_user_token()}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
             logger.trace("{} 请求响应体: {}", url, response.text)
@@ -327,7 +334,7 @@ class UndergradEASClient:
         url = f"{self.WEEK_INDEX_URL}"
         params = {"today": date.format_iso()}
         try:
-            headers = {"X-Id-Token": self._cas_client.user_token}
+            headers = {"X-Id-Token": self._require_user_token()}
             response = self._client.get(url, headers=headers, params=params)
             response.raise_for_status()
             logger.trace("{} 请求响应体: {}", url, response.text)
@@ -393,7 +400,7 @@ class UndergradEASClient:
         logger.info("尝试获取所有学期数据...")
         url = f"{self.ALL_SEMESTERS_URL}"
         try:
-            headers = {"Authorization": self._cas_client.user_token}
+            headers = {"Authorization": self._require_user_token()}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
             logger.trace("{} 请求响应体: {}", url, response.text)

@@ -11,10 +11,12 @@
 
 - Python packaging is defined in `pyproject.toml`; the build backend is Hatchling.
 - Use `uv` for environment management, installs, and project commands.
-- Common verification commands:
-  - `uv sync`
+- Common commands:
+  - `uv sync --extra develop,docs`
   - `uv build`
-  - `ruff check`
+  - `ruff format zzupy`
+  - `ruff check zzupy`
+  - `ty check zzupy`
 - There is currently no dedicated test suite in `tests/`; for most changes, at least run a build and a lightweight syntax check.
 - Docs are built with MkDocs Material. If you change public APIs or user workflows, update the relevant docs in `docs/` and verify with `uv sync --extra docs && uv run mkdocs build` when practical.
 
