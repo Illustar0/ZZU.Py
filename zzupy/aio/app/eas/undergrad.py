@@ -9,10 +9,12 @@ from whenever import Date
 
 from zzupy.app.interfaces import ICASClient
 from zzupy.exception import (
+    DataNotFoundError,
+    InvalidArgumentError,
     NetworkError,
-    ParsingError,
     NotLoggedInError,
     OperationError,
+    ParsingError,
 )
 from pydantic import ValidationError
 
@@ -81,9 +83,9 @@ class UndergradEASClient:
         """登录到新本科教务系统
 
         Raises:
-            OperationError: 如果登录失败
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
+            OperationError: 如果登录失败。
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
         """
         logger.info("尝试从本科教务系统获取用户信息...")
 
@@ -108,15 +110,25 @@ class UndergradEASClient:
                 self.USER_INFO_URL,
                 exc.response.status_code,
             )
-            raise OperationError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.USER_INFO_URL},
             ) from exc
-        except (json.JSONDecodeError, KeyError) as exc:
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
             logger.error("从 {} 响应中提取数据失败: {}", self.USER_INFO_URL, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.USER_INFO_URL},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("{} 请求失败: {}", self.USER_INFO_URL, exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.USER_INFO_URL},
+            ) from exc
 
         self._current_semester_id = (await self._get_current_semester()).id
 
@@ -136,15 +148,25 @@ class UndergradEASClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
-            raise OperationError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": url},
             ) from exc
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, TypeError) as exc:
             logger.error("从 {} 响应中提取数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": url},
+            ) from exc
 
         if response_data["result"] != 0:
             logger.error("服务器返回消息 {}", response_data["msg"])
@@ -154,7 +176,11 @@ class UndergradEASClient:
             data = CurrentSemesterModel.model_validate(response_data)
         except ValidationError as exc:
             logger.error("从 {} 响应中解析数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
 
         return data.data
 
@@ -176,15 +202,21 @@ class UndergradEASClient:
         Raises:
             ParsingError: 如果响应解析失败
             NetworkError: 如果网络请求失败
-            IndexError: 如果教学周序数不正确
-            OperationError: 如果服务器发生异常
+            InvalidArgumentError: 如果教学周序数不正确。
+            OperationError: 如果服务器发生异常。
         """
         logger.info("尝试获取第 {} 教学周...", week)
         if week < 1:
-            raise IndexError("教学周序数不可小于 1")
+            raise InvalidArgumentError("教学周序数不可小于 1")
         if semester_id is None:
             semester_id = self._current_semester_id
-        return (await self.get_teaching_weeks(semester_id))[week - 1]
+        teaching_weeks = await self.get_teaching_weeks(semester_id)
+        if week > len(teaching_weeks):
+            raise InvalidArgumentError(
+                f"教学周序数超出范围: {week}",
+                context={"week": week, "total_weeks": len(teaching_weeks)},
+            )
+        return teaching_weeks[week - 1]
 
     @require_auth
     async def get_teaching_weeks(
@@ -202,8 +234,8 @@ class UndergradEASClient:
         Raises:
             ParsingError: 如果响应解析失败
             NetworkError: 如果网络请求失败
-            IndexError: 如果教学周序数不正确
-            OperationError: 如果服务器发生异常
+            DataNotFoundError: 如果学期不存在。
+            OperationError: 如果服务器发生异常。
         """
         logger.info("尝试获取全部教学周...")
         if semester_id is None:
@@ -214,7 +246,10 @@ class UndergradEASClient:
                 week_indices = semester.week_indices
                 break
         else:
-            raise IndexError("semester_id 不存在！")
+            raise DataNotFoundError(
+                "semester_id 不存在",
+                context={"semester_id": semester_id},
+            )
 
         url = f"{self.COURSE_URL}/{semester_id}"
         try:
@@ -227,15 +262,25 @@ class UndergradEASClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
-            raise OperationError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": url},
             ) from exc
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, TypeError) as exc:
             logger.error("从 {} 响应中提取数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": url},
+            ) from exc
 
         if response_data["result"] != 0:
             logger.error("服务器返回消息 {}", response_data["msg"])
@@ -245,7 +290,11 @@ class UndergradEASClient:
             data = LessonModel.model_validate(response_data)
         except ValidationError as exc:
             logger.error("从 {} 响应中解析数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
 
         teaching_weeks = []
         for week_index in week_indices:
@@ -270,9 +319,9 @@ class UndergradEASClient:
             int | None: 教学周序数
 
         Raises:
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
-            OperationError: 如果服务器发生异常
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
+            OperationError: 如果服务器发生异常。
         """
         logger.info("尝试获取 {} 的教学周序数...", date.format_iso())
         url = f"{self.WEEK_INDEX_URL}"
@@ -287,15 +336,25 @@ class UndergradEASClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
-            raise OperationError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": url},
             ) from exc
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, TypeError) as exc:
             logger.error("从 {} 响应中提取数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": url},
+            ) from exc
 
         if response_data["code"] != 0:
             logger.error("服务器返回消息 {}", response_data["msg"])
@@ -305,7 +364,11 @@ class UndergradEASClient:
             data = WeekIndexModel.model_validate(response_data)
         except ValidationError as exc:
             logger.error("从 {} 响应中解析数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
 
         if data.data.data.date[0] != "":
             return int(data.data.data.date[0])
@@ -323,9 +386,9 @@ class UndergradEASClient:
             list[Semester]: 所有学期的数据
 
         Raises:
-            ParsingError: 如果响应解析失败
-            NetworkError: 如果网络请求失败
-            OperationError: 如果服务器发生异常
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
+            OperationError: 如果服务器发生异常。
         """
         logger.info("尝试获取所有学期数据...")
         url = f"{self.ALL_SEMESTERS_URL}"
@@ -339,15 +402,25 @@ class UndergradEASClient:
 
         except httpx.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
-            raise OperationError(
-                f"服务器返回错误状态 {exc.response.status_code}"
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": url},
             ) from exc
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, TypeError) as exc:
             logger.error("从 {} 响应中提取数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": url},
+            ) from exc
 
         if response_data["result"] != 0:
             logger.error("服务器返回消息 {}", response_data["msg"])
@@ -357,7 +430,11 @@ class UndergradEASClient:
             data = SemesterModel.model_validate(response_data)
         except ValidationError as exc:
             logger.error("从 {} 响应中解析数据失败: {}", url, exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
 
         return data.data
 

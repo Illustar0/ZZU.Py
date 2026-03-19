@@ -156,10 +156,18 @@ class CASClient(ICASClient):
             return serialization.load_pem_public_key(public_key_pem)
         except httpx.RequestError as exc:
             logger.error("获取公钥失败，网络请求异常: {}", exc)
-            raise NetworkError("获取公钥失败，无法连接到认证服务器。") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "获取公钥失败，无法连接到认证服务器。",
+                context={"url": self.PUBLIC_KEY_URL},
+            ) from exc
         except Exception as exc:
             logger.error("解析公钥失败: {}", exc)
-            raise ParsingError("认证服务公钥格式无效") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "认证服务公钥格式无效",
+                context={"url": self.PUBLIC_KEY_URL},
+            ) from exc
 
     @staticmethod
     def _encrypt_and_encode(data: str, public_key) -> str:
@@ -179,9 +187,9 @@ class CASClient(ICASClient):
             force_login: 强制使用账密登录
 
         Raises:
-            LoginError: 如果登录失败
-            ParsingError: 如果服务器响应无法解析
-            NetworkError: 如果出现网络错误
+            LoginError: 如果登录失败。
+            ParsingError: 如果服务器响应无法解析。
+            NetworkError: 如果出现网络错误。
         """
         if self._public_key is None:
             self._public_key = self._get_public_key()
@@ -235,13 +243,25 @@ class CASClient(ICASClient):
 
         except httpx.HTTPStatusError as exc:
             logger.error("登录请求返回失败状态码: {}", exc.response.status_code)
-            raise LoginError(f"服务器返回错误状态 {exc.response.status_code}") from exc
-        except (json.JSONDecodeError, KeyError) as exc:
+            raise LoginError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": self.LOGIN_URL},
+            ) from exc
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
             logger.error("从 /passwordLogin 响应中提取 token 失败: {}", exc)
-            raise ParsingError("服务器响应格式不正确") from exc
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": self.LOGIN_URL},
+            ) from exc
         except httpx.RequestError as exc:
             logger.error("登录网络请求失败: {}", exc)
-            raise NetworkError("网络连接异常") from exc
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": self.LOGIN_URL},
+            ) from exc
 
     @require_auth
     def logout(self) -> None:

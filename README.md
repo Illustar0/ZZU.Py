@@ -20,6 +20,7 @@
 - 账密登录与 Token 复用并存，适合脚本和长期任务
 - 同步 / 异步 API 基本对齐，迁移成本低
 - 使用 Pydantic 模型组织响应数据，便于补全和校验
+- 提供统一异常层级，公共异常基类为 `zzupy.exception.ZZUError`
 - 保留较底层的请求行为，尽量贴近真实上游接口
 
 ## 安装
@@ -95,6 +96,8 @@ uv build
 ```
 
 如果修改公开 API 或使用方式，建议同步更新 `docs/`。
+
+异常处理建议优先捕获 `zzupy.exception.ZZUError`，再按需细分到 `NetworkError`、`ParsingError`、`OperationError`、`InvalidArgumentError` 等具体异常。
 
 ## 许可证
 

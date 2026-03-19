@@ -164,8 +164,10 @@ asyncio.run(main())
 
 常见异常：
 
+- `ZZUError`：所有项目异常的基类，带 `context` 可用于日志记录
 - `NotLoggedInError`：CAS 未登录或未调用 `eas.login()`
 - `NetworkError`：网络请求失败
 - `ParsingError`：响应结构变化，Pydantic 校验失败
 - `OperationError`：服务端返回业务错误
-- `IndexError`：教学周或学期索引超出范围
+- `InvalidArgumentError`：教学周序数不合法
+- `DataNotFoundError`：指定的 `semester_id` 不存在
