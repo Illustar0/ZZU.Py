@@ -2,6 +2,98 @@
 
 <!-- version list -->
 
+.. _changelog-v7.0.0:
+
+v7.0.0 (2026-03-19)
+===================
+
+✨ Features
+-----------
+
+* Adapt new undergraduate EAS (`PR#30`_, `b948852`_)
+
+* Add sanitized HTTP client logs (`PR#35`_, `a2c91a3`_)
+
+🪲 Bug Fixes
+------------
+
+* Always close self-service clients (`eda293e`_)
+
+* Refresh tokens on the async event loop (`3aca668`_)
+
+* Resolve ty diagnostics and add local development checks (`PR#34`_, `a5e519b`_)
+
+📖 Documentation
+----------------
+
+* Add AGENTS.md to clarify project structure and guidelines (`2f5540b`_)
+
+* Fix async API references (`b2ea468`_)
+
+* Refresh source-aligned documentation for app and web clients (`PR#31`_, `0c8a99f`_)
+
+♻️ Refactoring
+---------------
+
+* Improve exception hierarchy and error handling robustness (`PR#33`_, `868025b`_)
+
+* Rename method to clarify functionality (`9d601e6`_)
+
+🧹 Chores
+---------
+
+* Prepare v7.0.0 (`3410261`_)
+
+* Update actions/checkout action to v6 (`PR#25`_, `45ab3af`_)
+
+* Update actions/upload-artifact action to v6 (`PR#26`_, `3c735c2`_)
+
+* Update actions/upload-artifact action to v7 (`PR#28`_, `32ece3c`_)
+
+* Update astral-sh/setup-uv action to v7 (`PR#27`_, `08f7253`_)
+
+* Update base branch to ``dev`` in Renovate and CI workflows (`4a07852`_)
+
+🎨 Code Style
+-------------
+
+* Normalize whitespace in schema modules (`959824a`_)
+
+💥 Breaking Changes
+-------------------
+
+* Supwisdom client is no longer available
+
+* Supwisdom-related docs are no longer available.
+
+.. _08f7253: https://github.com/Illustar0/ZZU.Py/commit/08f7253a651dd24e0ac2899fd80234266b42c11d
+.. _0c8a99f: https://github.com/Illustar0/ZZU.Py/commit/0c8a99fe096cc3630c32e81cac66931b8a658b98
+.. _2f5540b: https://github.com/Illustar0/ZZU.Py/commit/2f5540ba2b0ce9e76005877af4fbe98829d71f4f
+.. _32ece3c: https://github.com/Illustar0/ZZU.Py/commit/32ece3ccac4c6f48d787b3c488e2106287d88e35
+.. _3410261: https://github.com/Illustar0/ZZU.Py/commit/3410261e3d63ab776691971b0830d3824e215d87
+.. _3aca668: https://github.com/Illustar0/ZZU.Py/commit/3aca66892d2d446fbae8742c438f150e9dd44696
+.. _3c735c2: https://github.com/Illustar0/ZZU.Py/commit/3c735c2a73f2a1fe92e011cffc39f5f545595331
+.. _45ab3af: https://github.com/Illustar0/ZZU.Py/commit/45ab3af4052e1c1887d249d93c041592aa746536
+.. _4a07852: https://github.com/Illustar0/ZZU.Py/commit/4a07852e8781c12da9c8410f58a93e39e64f4056
+.. _868025b: https://github.com/Illustar0/ZZU.Py/commit/868025b87497ea0d33bd4290028c6fd67d65848a
+.. _959824a: https://github.com/Illustar0/ZZU.Py/commit/959824a64292b38556d865db1dde5b9721a9b280
+.. _9d601e6: https://github.com/Illustar0/ZZU.Py/commit/9d601e6960b7ab9f6ed4496f41eadacc178f0731
+.. _a2c91a3: https://github.com/Illustar0/ZZU.Py/commit/a2c91a3ac0e055f297398f9af97d9b70bf9b0bd7
+.. _a5e519b: https://github.com/Illustar0/ZZU.Py/commit/a5e519bfa4586082a0619c7fefd6705a92d4a4f2
+.. _b2ea468: https://github.com/Illustar0/ZZU.Py/commit/b2ea468f738e611779b6ca8fce1a706403061b11
+.. _b948852: https://github.com/Illustar0/ZZU.Py/commit/b948852f7950f80520af6700bb35b42242f18344
+.. _eda293e: https://github.com/Illustar0/ZZU.Py/commit/eda293e1a44bf47c6f3aa1d2048103139868d5bf
+.. _PR#25: https://github.com/Illustar0/ZZU.Py/pull/25
+.. _PR#26: https://github.com/Illustar0/ZZU.Py/pull/26
+.. _PR#27: https://github.com/Illustar0/ZZU.Py/pull/27
+.. _PR#28: https://github.com/Illustar0/ZZU.Py/pull/28
+.. _PR#30: https://github.com/Illustar0/ZZU.Py/pull/30
+.. _PR#31: https://github.com/Illustar0/ZZU.Py/pull/31
+.. _PR#33: https://github.com/Illustar0/ZZU.Py/pull/33
+.. _PR#34: https://github.com/Illustar0/ZZU.Py/pull/34
+.. _PR#35: https://github.com/Illustar0/ZZU.Py/pull/35
+
+
 .. _changelog-v6.0.2:
 
 v6.0.2 (2026-01-24)
