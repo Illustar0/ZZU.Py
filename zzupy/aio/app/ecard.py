@@ -11,7 +11,7 @@ import gmalg
 import httpx
 from loguru import logger
 
-from zzupy.app.interfaces import ICASClient
+from zzupy.aio.app.interfaces import ICASClient
 from zzupy.exception import (
     InvalidArgumentError,
     NetworkError,
@@ -54,6 +54,18 @@ class ECardClient:
         self._default_room: str | None = None
         self._logged_in: bool = False
         self._refresh_timer: threading.Timer | None = None
+
+    def _require_access_token(self) -> str:
+        access_token = self._access_token
+        if access_token is None:
+            raise NotLoggedInError("校园卡 accessToken 不存在")
+        return access_token
+
+    def _require_user_token(self) -> str:
+        user_token = self._cas_client.user_token
+        if user_token is None:
+            raise NotLoggedInError("CASClient 缺少 userToken")
+        return user_token
 
     async def __aenter__(self) -> "ECardClient":
         return self
@@ -243,7 +255,7 @@ class ECardClient:
         if self._default_room is not None:
             return self._default_room
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
         data = {"utilityType": "electric"}
 
         try:
@@ -313,7 +325,7 @@ class ECardClient:
 
         logger.debug("准备为房间 {} 充值 {} 元", room, amt)
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
 
         try:
             # 获取加密信息
@@ -426,7 +438,7 @@ class ECardClient:
             ParsingError: 如果响应解析失败。
             NetworkError: 如果网络请求失败。
         """
-        headers = {"X-Id-Token": self._cas_client.user_token}
+        headers = {"X-Id-Token": self._require_user_token()}
 
         try:
             logger.debug("正在向 {} 发送请求获取校园卡余额...", self.BALANCE_URL)
@@ -525,7 +537,7 @@ class ECardClient:
                 context={"room_id": room_id},
             )
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
         data = {
             "utilityType": "electric",
             "locationType": location_type,
@@ -616,7 +628,7 @@ class ECardClient:
                 context={"room": room},
             ) from exc
 
-        headers = {"Authorization": self._access_token}
+        headers = {"Authorization": self._require_access_token()}
         data = {
             "utilityType": "electric",
             "bigArea": "",

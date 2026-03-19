@@ -8,16 +8,10 @@ from typing import Final
 
 import httpx
 import jwt
-
-try:
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import padding
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-except ImportError:
-    from zzupy.crypto import RSAPublicKey, padding, serialization
 from loguru import logger
 
 from zzupy.app.interfaces import ICASClient
+from zzupy.crypto import RSAPublicKey, padding, serialization
 from zzupy.exception import LoginError, ParsingError, NetworkError
 from zzupy.utils import require_auth
 
@@ -86,10 +80,17 @@ class CASClient(ICASClient):
         return self._logged_in
 
     def _validate_jwt(self, pre_set_token: bool = False) -> bool:
+        user_token = self._user_token
+        refresh_token = self._refresh_token
+        if user_token is None or refresh_token is None:
+            if pre_set_token:
+                return False
+            raise LoginError("登录失败，认证服务未返回完整 Token。")
+
         if pre_set_token:
             try:
                 user_token_plain: dict = jwt.decode(
-                    self._user_token, options={"verify_signature": False}
+                    user_token, options={"verify_signature": False}
                 )
                 expire_date = datetime.fromtimestamp(user_token_plain.get("exp"))
                 now = datetime.now()
@@ -120,7 +121,7 @@ class CASClient(ICASClient):
                 return False
 
             try:
-                jwt.decode(self._refresh_token, options={"verify_signature": False})
+                jwt.decode(refresh_token, options={"verify_signature": False})
             except jwt.ExpiredSignatureError:
                 logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
                 return False
@@ -129,14 +130,14 @@ class CASClient(ICASClient):
                 return False
         else:
             try:
-                jwt.decode(self._user_token, options={"verify_signature": False})
+                jwt.decode(user_token, options={"verify_signature": False})
             except jwt.InvalidTokenError:
                 raise LoginError(
                     "登录失败，下发的 userToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
                 )
 
             try:
-                jwt.decode(self._refresh_token, options={"verify_signature": False})
+                jwt.decode(refresh_token, options={"verify_signature": False})
             except jwt.InvalidTokenError:
                 raise LoginError(
                     "登录失败，下发的 refreshToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
@@ -145,7 +146,7 @@ class CASClient(ICASClient):
         logger.info("userToken 和 refreshToken 有效")
         return True
 
-    def _get_public_key(self):
+    def _get_public_key(self) -> RSAPublicKey:
         """从 CAS 服务器获取 RSA 公钥。"""
         logger.debug("正在从 {} 获取公钥...", self.PUBLIC_KEY_URL)
         headers = {"User-Agent": "okhttp/3.12.1"}
@@ -170,7 +171,7 @@ class CASClient(ICASClient):
             ) from exc
 
     @staticmethod
-    def _encrypt_and_encode(data: str, public_key) -> str:
+    def _encrypt_and_encode(data: str, public_key: RSAPublicKey) -> str:
         """使用公钥加密数据，进行 Base64 编码，并添加 '__RSA__' 前缀。"""
         encrypted_bytes = public_key.encrypt(data.encode("utf-8"), padding.PKCS1v15())
         encoded_bytes = base64.b64encode(encrypted_bytes)

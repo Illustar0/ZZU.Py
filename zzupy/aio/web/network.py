@@ -41,13 +41,14 @@ async def discover_portal_info() -> PortalInfo | None:
         ParsingError: 如果响应格式异常
     """
 
-    def _parse_portal_redirect(html_content: str) -> str | None:
+    def _parse_portal_redirect(html_content: str) -> str:
         """解析Portal重定向链接"""
         soup = BeautifulSoup(html_content, features="html.parser")
         a_tag = soup.find("a")
-        if a_tag is None or a_tag.get("href") is None:
+        href = None if a_tag is None else a_tag.get("href")
+        if not isinstance(href, str):
             raise ParsingError("无法解析网页认证 URL")
-        return a_tag.get("href")
+        return href
 
     def _extract_user_ip(portal_url: str) -> str:
         """从Portal URL提取用户IP"""
@@ -149,7 +150,7 @@ class EPortalClient:
         self._base_url = base_url
         self._client = httpx.AsyncClient()
         if bind_address is None:
-            self._bind_address = get_local_ip()
+            self._bind_address = get_local_ip() or ""
         else:
             self._bind_address = bind_address
         self._xor_cipher = XorCipher(self._bind_address)
@@ -159,12 +160,12 @@ class EPortalClient:
             ]
 
             if self._bind_address in local_ips:
-                transport = httpx.AsyncHTTPTransport(local_address=bind_address)
+                transport = httpx.AsyncHTTPTransport(local_address=self._bind_address)
             else:
                 transport = httpx.AsyncHTTPTransport()
 
         else:
-            transport = httpx.AsyncHTTPTransport(local_address=bind_address)
+            transport = httpx.AsyncHTTPTransport(local_address=self._bind_address)
         self._client = httpx.AsyncClient(
             transport=transport,
         )
@@ -264,7 +265,11 @@ class EPortalClient:
             ) from exc
 
     async def auth(
-        self, account: str, password: str, isp_suffix: str = None, encrypt: bool = False
+        self,
+        account: str,
+        password: str,
+        isp_suffix: str | None = None,
+        encrypt: bool = False,
     ) -> AuthResult:
         """进行 Portal 认证
 
