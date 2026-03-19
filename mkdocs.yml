@@ -1,5 +1,5 @@
 site_name: "ZZU.Py 文档"
-site_description: "A Python handler for mkdocstrings."
+site_description: "郑州大学常用线上服务的 Python API 封装文档"
 site_url: "https://illustar0.github.io/ZZU.Py/"
 repo_url: "https://github.com/Illustar0/ZZU.Py"
 repo_name: "Illustar0/ZZU.Py"
@@ -23,7 +23,9 @@ nav:
 - Usage:
   - 移动端:
     - 统一认证: usage/app/auth.md
-    - 树维教务: usage/app/supwisdom.md
+    - 教务系统:
+        - 本科教务: usage/app/eas/undergrad.md
+        - 迁移指南: usage/app/eas/migration.md
     - 一卡通: usage/app/ecard.md
   - Web 端:
     - 校园网: usage/web/network.md
@@ -167,8 +169,6 @@ plugins:
     type: timeago
 - minify:
     minify_html: true
-
-
 
 
 
