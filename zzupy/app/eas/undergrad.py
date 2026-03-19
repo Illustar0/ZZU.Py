@@ -4,7 +4,6 @@ import json
 from typing import Final
 
 import httpx
-from loguru import logger
 from whenever import Date
 
 from zzupy.app.interfaces import ICASClient
@@ -28,6 +27,7 @@ from zzupy.model.eas import (
     CurrentSemesterModel,
     TeachingWeeks,
 )
+from zzupy.logging import build_http_event_hooks, log_http_response_body, logger
 from zzupy.utils import require_auth
 
 
@@ -52,21 +52,7 @@ class UndergradEASClient:
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
-        def request_logger(request):
-            logger.trace(f">>> {request.method} {request.url}")
-            logger.trace(f">>> Headers: {dict(request.headers)}")
-            if request.content:
-                try:
-                    logger.trace(f">>> Body: {request.content.decode('utf-8')}")
-                except Exception:
-                    logger.trace(">>> Body: (Binary)")
-
-        def response_logger(response):
-            logger.trace(f"<<< Headers: {dict(response.headers)}")
-
-        self._client = httpx.Client(
-            event_hooks={"request": [request_logger], "response": [response_logger]}
-        )
+        self._client = httpx.Client(event_hooks=build_http_event_hooks())
         self._cas_client = cas_client
         self._client.cookies.set(
             "userToken", self._require_user_token(), ".zzu.edu.cn", "/"
@@ -103,7 +89,11 @@ class UndergradEASClient:
                 headers=headers,
             )
             response.raise_for_status()
-            logger.trace("{} 请求响应体: {}", self.USER_INFO_URL, response.text)
+            log_http_response_body(
+                self.USER_INFO_URL,
+                response.text,
+                content_type=response.headers.get("content-type"),
+            )
 
             response_data = response.json()
 
@@ -149,7 +139,11 @@ class UndergradEASClient:
             headers = {"Authorization": self._require_user_token()}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
-            logger.trace("{} 请求响应体: {}", url, response.text)
+            log_http_response_body(
+                url,
+                response.text,
+                content_type=response.headers.get("content-type"),
+            )
 
             response_data = response.json()
 
@@ -263,7 +257,11 @@ class UndergradEASClient:
             headers = {"Authorization": self._require_user_token()}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
-            logger.trace("{} 请求响应体: {}", url, response.text)
+            log_http_response_body(
+                url,
+                response.text,
+                content_type=response.headers.get("content-type"),
+            )
 
             response_data = response.json()
 
@@ -337,7 +335,11 @@ class UndergradEASClient:
             headers = {"X-Id-Token": self._require_user_token()}
             response = self._client.get(url, headers=headers, params=params)
             response.raise_for_status()
-            logger.trace("{} 请求响应体: {}", url, response.text)
+            log_http_response_body(
+                url,
+                response.text,
+                content_type=response.headers.get("content-type"),
+            )
 
             response_data = response.json()
 
@@ -403,7 +405,11 @@ class UndergradEASClient:
             headers = {"Authorization": self._require_user_token()}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
-            logger.trace("{} 请求响应体: {}", url, response.text)
+            log_http_response_body(
+                url,
+                response.text,
+                content_type=response.headers.get("content-type"),
+            )
 
             response_data = response.json()
 
