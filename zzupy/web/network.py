@@ -14,7 +14,13 @@ import ifaddr
 from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
-from zzupy.exception import LoginError, ParsingError, NetworkError
+from zzupy.exception import (
+    LoginError,
+    NetworkError,
+    OperationError,
+    ParsingError,
+    ZZUError,
+)
 from zzupy.model.network import AuthResult, OnlineDevice, PortalInfo
 from zzupy.utils import (
     get_local_ip,
@@ -114,10 +120,12 @@ def discover_portal_info() -> PortalInfo | None:
                 auth_url=auth_url, portal_server_url=portal_server_url, user_ip=user_ip
             )
 
-    except httpx.RequestError as e:
-        raise NetworkError(f"网络请求失败: {e}")
-    except Exception as e:
-        raise NetworkError(f"Portal信息发现失败: {e}")
+    except httpx.RequestError as exc:
+        raise NetworkError.from_exception(exc, f"网络请求失败: {exc}") from exc
+    except ZZUError:
+        raise
+    except Exception as exc:
+        raise NetworkError.from_exception(exc, f"Portal信息发现失败: {exc}") from exc
 
 
 class EPortalClient:
@@ -241,10 +249,18 @@ class EPortalClient:
             response.raise_for_status()
             res_json = json.loads(JsonPParser(response.text).data)
             return AuthResult.model_validate(res_json)
-        except httpx.RequestError as e:
-            raise NetworkError(f"发生网络错误: {e}") from e
-        except (json.JSONDecodeError, ValueError, ValidationError) as e:
-            raise ParsingError(f"无法解析的 API 响应: {e}") from e
+        except httpx.RequestError as exc:
+            raise NetworkError.from_exception(
+                exc,
+                f"发生网络错误: {exc}",
+                context={"url": f"{self._base_url}/eportal/portal/login"},
+            ) from exc
+        except (json.JSONDecodeError, ValueError, ValidationError, TypeError) as exc:
+            raise ParsingError.from_exception(
+                exc,
+                f"无法解析的 API 响应: {exc}",
+                context={"url": f"{self._base_url}/eportal/portal/login"},
+            ) from exc
 
     def auth(
         self, account: str, password: str, isp_suffix: str = None, encrypt: bool = False
@@ -327,8 +343,12 @@ class SelfServiceSystem:
                 raise LoginError("登录失败。这可能是因为账户和密码不正确。")
             self._logged_in = True
             return None
-        except httpx.RequestError as e:
-            raise NetworkError(f"发生网络错误: {e}") from e
+        except httpx.RequestError as exc:
+            raise NetworkError.from_exception(
+                exc,
+                f"发生网络错误: {exc}",
+                context={"url": "/Self/login/verify"},
+            ) from exc
 
     @require_auth
     def get_online_devices(self) -> List[OnlineDevice]:
@@ -355,13 +375,21 @@ class SelfServiceSystem:
             response.raise_for_status()
             response_data = response.json()
             return [OnlineDevice(**device) for device in response_data]
-        except httpx.RequestError as e:
-            raise NetworkError(f"发生网络错误: {e}") from e
-        except json.JSONDecodeError as e:
-            raise ParsingError(f"无法解析的 API 响应: {e}") from e
+        except httpx.RequestError as exc:
+            raise NetworkError.from_exception(
+                exc,
+                f"发生网络错误: {exc}",
+                context={"url": "/Self/dashboard/getOnlineList"},
+            ) from exc
+        except (json.JSONDecodeError, ValidationError, TypeError) as exc:
+            raise ParsingError.from_exception(
+                exc,
+                f"无法解析的 API 响应: {exc}",
+                context={"url": "/Self/dashboard/getOnlineList"},
+            ) from exc
 
     @require_auth
-    def kick_device(self, session_id: str):
+    def kick_device(self, session_id: str) -> None:
         """将设备踢下线
 
         Args:
@@ -374,22 +402,42 @@ class SelfServiceSystem:
             "t": str(random.random()),
             "sessionid": session_id,
         }
-        response = self._client.get(
-            "/Self/dashboard/tooffline",
-            params=params,
-        )
-        response.raise_for_status()
+        try:
+            response = self._client.get(
+                "/Self/dashboard/tooffline",
+                params=params,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": "/Self/dashboard/tooffline", "session_id": session_id},
+            ) from exc
+        except httpx.RequestError as exc:
+            raise NetworkError.from_exception(
+                exc,
+                f"发生网络错误: {exc}",
+                context={"url": "/Self/dashboard/tooffline", "session_id": session_id},
+            ) from exc
 
     @require_auth
-    def logout(self):
+    def logout(self) -> None:
         """登出
 
         Raises:
             NotLoggedInError: 如果未登录
         """
-        self._client.get(
-            "/Self/login/logout",
-        )
+        try:
+            self._client.get(
+                "/Self/login/logout",
+            )
+        except httpx.RequestError as exc:
+            raise NetworkError.from_exception(
+                exc,
+                f"发生网络错误: {exc}",
+                context={"url": "/Self/login/logout"},
+            ) from exc
         self._logged_in = False
 
     def close(self):

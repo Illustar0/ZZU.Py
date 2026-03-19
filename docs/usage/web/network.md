@@ -176,10 +176,12 @@ asyncio.run(main())
 
 常见异常：
 
+- `ZZUError`：所有项目异常的基类，带 `context` 可用于统一日志处理
 - `NetworkError`：网络请求失败，或当前网络不在预期认证状态
 - `ParsingError`：HTML / JSON / JSONP 结构变化
 - `LoginError`：自助服务系统登录失败
 - `NotLoggedInError`：未登录却调用需要登录的方法
+- `OperationError`：踢设备等操作收到异常状态码
 
 ## 注意事项
 
