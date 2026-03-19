@@ -60,8 +60,8 @@ class CASClient(ICASClient):
         """设置统一认证 Token。
 
         Args:
-            user_token: `userToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`user_token`][zzupy.app.auth.CASClient.user_token] 获取
-            refresh_token: `refreshToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`refresh_token`][zzupy.app.auth.CASClient.refresh_token] 获取
+            user_token: `userToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`user_token`][zzupy.aio.app.auth.CASClient.user_token] 获取
+            refresh_token: `refreshToken`。对豫见郑大 APP 抓包获取，或账密登录后访问 [`refresh_token`][zzupy.aio.app.auth.CASClient.refresh_token] 获取
         """
         self._user_token = user_token
         self._refresh_token = refresh_token
@@ -181,9 +181,9 @@ class CASClient(ICASClient):
     async def login(self, force_login: bool = False) -> None:
         """登录统一认证。
 
-        成功后，[`userToken`][zzupy.app.auth.CASClient.user_token] 和 [`refreshToken`][zzupy.app.auth.CASClient.refresh_token] 会被存储在实例中.
+        成功后，[`userToken`][zzupy.aio.app.auth.CASClient.user_token] 和 [`refreshToken`][zzupy.aio.app.auth.CASClient.refresh_token] 会被存储在实例中.
 
-        若 [`user_token`][zzupy.app.auth.CASClient.user_token] 和 [`refresh_token`][zzupy.app.auth.CASClient.refresh_token] 已通过 [`set_token`][zzupy.app.auth.CASClient.set_token] 设置且有效，则会跳过账密登录。
+        若 [`user_token`][zzupy.aio.app.auth.CASClient.user_token] 和 [`refresh_token`][zzupy.aio.app.auth.CASClient.refresh_token] 已通过 [`set_token`][zzupy.aio.app.auth.CASClient.set_token] 设置且有效，则会跳过账密登录。
 
         Args:
             force_login: 强制使用账密登录
