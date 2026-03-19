@@ -135,9 +135,12 @@ asyncio.run(main())
 
 常见异常来自 `zzupy.exception`：
 
+- `ZZUError`：所有项目异常的基类，带 `message`、`context` 和 `to_dict()`
 - `LoginError`：账号密码错误，或服务端拒绝登录
 - `NetworkError`：网络请求失败
 - `ParsingError`：响应结构与预期不符
+
+如果你希望统一处理所有认证失败场景，可以优先捕获 `ZZUError`，再根据 `exc.context` 补充日志。
 
 ## 注意事项
 
