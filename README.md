@@ -1,5 +1,7 @@
 # ZZU.Py
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Illustar0/ZZU.Py)    
+
 豫见郑大相关服务的 Python API 封装。
 
 ## 概述
