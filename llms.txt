@@ -1,0 +1,38 @@
+# zzupy
+
+zzupy is a Python library for Zhengzhou University mobile-app and web services.
+
+## Public modules
+- `zzupy.app`: synchronous mobile-app clients
+- `zzupy.web`: synchronous web clients
+- `zzupy.aio`: asynchronous counterparts of `zzupy.app` and `zzupy.web`
+- `zzupy.model`: shared data models and response contracts
+- `zzupy.exception`: project-specific exception types
+
+## Main capabilities
+- CAS authentication for Zhengzhou University services
+- Campus card / ecard access and utility payment flows
+- Undergraduate EAS schedule and semester queries
+- Campus network portal authentication and self-service operations
+
+## Important conventions
+- Sync and async clients are intended to mirror behavior.
+- Public data contracts are centralized in `zzupy.model`.
+- Shared helpers live in `zzupy.utils`.
+- Preserve upstream request headers, params, cookies, and login flows when changing client behavior.
+- Reuse existing exception types instead of raising generic exceptions for domain failures.
+
+## Recommended entry points
+- `README.md`
+- `docs/index.md`
+- `docs/usage/app/auth.md`
+- `docs/usage/app/ecard.md`
+- `docs/usage/app/eas/undergrad.md`
+- `docs/usage/web/network.md`
+- `docs/reference/api.md`
+
+## Notes for agents
+- Prefer public client modules over internal implementation details.
+- When changing `zzupy.app` or `zzupy.web`, check whether the same change is also needed in `zzupy.aio`.
+- Keep model validation and normalization close to `zzupy.model` when possible.
+- If public APIs or user workflows change, update the relevant docs.
