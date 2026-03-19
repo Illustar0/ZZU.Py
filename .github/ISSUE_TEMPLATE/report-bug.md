@@ -12,10 +12,6 @@ assignees: ''
 
 **复现步骤**
 复现该问题的步骤：
-1. 前往 '...'
-2. 点击 '...'
-3. 向下滚动到 '...'
-4. 出现错误
 
 **预期行为**
 请清晰、简洁地描述您预期的行为。
@@ -23,10 +19,13 @@ assignees: ''
 **日志**
 如果适用，请附上日志以帮助解释您的问题。
 ```python
-# 启用 Debug 日志
-from zzupy.logging import configure_logging
+# 启用 TRACE 日志
+from loguru import logger
+import sys
 
-configure_logging(level="DEBUG")
+logger.remove()
+logger.add(sys.stderr, level="TRACE")
+logger.enable("zzupy")
 ```
 
 

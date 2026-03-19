@@ -90,14 +90,25 @@ with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as cli
 项目使用 `uv` 管理环境和命令。
 
 ```bash
-uv sync
-ruff check
+uv sync --extra develop,docs
+ruff format zzupy
+ruff check zzupy
+ty check zzupy
 uv build
 ```
 
-如果修改公开 API 或使用方式，建议同步更新 `docs/`。
-
 异常处理建议优先捕获 `zzupy.exception.ZZUError`，再按需细分到 `NetworkError`、`ParsingError`、`OperationError`、`InvalidArgumentError` 等具体异常。
+
+如需快速打开库内日志，推荐直接调用 `logger.enable("zzupy")`。
+```python
+# 启用 TRACE 日志
+from loguru import logger
+import sys
+
+logger.remove()
+logger.add(sys.stderr, level="TRACE")
+logger.enable("zzupy")
+```
 
 ## 许可证
 
