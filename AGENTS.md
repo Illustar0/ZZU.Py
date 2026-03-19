@@ -39,7 +39,9 @@
 ## Documentation And Release Notes
 
 - Public surface changes should usually update `README.md` and the relevant usage docs under `docs/usage/`.
+- Keep repository-level AI/discovery metadata in sync when relevant: `llms.txt` for project guidance, `context7.json` for Context7 ownership metadata, and the README badges/links for external documentation indexes such as DeepWiki.
 - API reference pages are generated from code, so exported symbols and docstrings matter.
+- Prefer small, targeted documentation commits when changing repository metadata or discovery files so ownership/verification changes stay easy to audit.
 - Versioning and release automation are handled through `python-semantic-release`; do not manually change release flow unless the task explicitly requires it.
 
 ## Workspace Hygiene
