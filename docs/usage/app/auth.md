@@ -15,6 +15,7 @@
 
 - 账密登录
 - 预置 Token 后跳过账密登录
+- 获取个人信息聚合数据
 - 自动检查 Token 是否即将过期
 - 在会话生命周期内维护登录状态
 
@@ -49,6 +50,22 @@ print(cas.logged_in)
 ```
 
 如果预置的 Token 仍然有效，`login()` 会直接复用；如果已经失效或即将过期，则会退回账密登录并更新 Token。
+
+## 读取个人信息
+
+`get_user_info()` 会组合两个 App 接口，返回学号、姓名、身份类型、学院、一卡通余额、未读邮件数和科研信息数量。
+
+```python title="读取个人信息"
+from zzupy.app import CASClient
+
+cas = CASClient("your_account", "your_password")
+cas.login()
+
+info = cas.get_user_info()
+print(info.name)
+print(info.uid)
+print(info.balance)
+```
 
 ## 与其他客户端配合使用
 
@@ -105,6 +122,7 @@ token_file.write_text(
 ## 常用属性与方法
 
 - `login()`：登录或校验当前 Token
+- `get_user_info()`：获取个人信息聚合数据
 - `set_token(user_token, refresh_token)`：预置已有 Token
 - `logout()`：清理当前登录状态
 - `close()`：关闭底层连接
@@ -124,7 +142,9 @@ from zzupy.aio.app import CASClient
 async def main():
     cas = CASClient("your_account", "your_password")
     await cas.login()
+    info = await cas.get_user_info()
     print(cas.logged_in)
+    print(info.name)
     await cas.close()
 
 
@@ -137,6 +157,7 @@ asyncio.run(main())
 
 - `ZZUError`：所有项目异常的基类，带 `message`、`context` 和 `to_dict()`
 - `LoginError`：账号密码错误，或服务端拒绝登录
+- `OperationError`：认证成功但业务接口返回失败结果
 - `NetworkError`：网络请求失败
 - `ParsingError`：响应结构与预期不符
 
