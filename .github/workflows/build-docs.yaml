@@ -34,7 +34,7 @@ jobs:
         id: build
         run: |
           uv sync --extra docs
-          uv run mkdocs build
+          uv run zensical build
 
       - name: Upload static files as artifact
         id: deployment

@@ -1,0 +1,100 @@
+[project]
+site_name = "ZZU.Py 文档"
+site_description = "郑州大学常用线上服务的 Python API 封装文档"
+site_url = "https://illustar0.github.io/ZZU.Py/"
+repo_url = "https://github.com/Illustar0/ZZU.Py"
+repo_name = "Illustar0/ZZU.Py"
+docs_dir = "docs"
+site_dir = "site"
+edit_uri = "edit/main/docs/"
+copyright = "Copyright © 2025 Illustar0"
+nav = [
+    { "Home" = "index.md" },
+    { "Usage" = [
+        { "移动端" = [
+            { "统一认证" = "usage/app/auth.md" },
+            { "教务系统" = [
+                { "本科教务" = "usage/app/eas/undergrad.md" },
+                { "迁移指南" = "usage/app/eas/migration.md" },
+            ] },
+            { "一卡通" = "usage/app/ecard.md" },
+        ] },
+        { "Web 端" = [
+            { "校园网" = "usage/web/network.md" },
+        ] },
+    ] },
+    { "Note" = "note.md" },
+    { "API" = "reference/api.md" },
+]
+
+[project.theme]
+variant = "classic"
+
+[project.markdown_extensions.abbr]
+
+[project.markdown_extensions.admonition]
+
+[project.markdown_extensions.attr_list]
+
+[project.markdown_extensions.footnotes]
+
+[project.markdown_extensions.md_in_html]
+
+[project.markdown_extensions.toc]
+permalink = "¤"
+
+[project.markdown_extensions.pymdownx.details]
+
+[project.markdown_extensions.pymdownx.emoji]
+emoji_generator = "zensical.extensions.emoji.to_svg"
+emoji_index = "zensical.extensions.emoji.twemoji"
+
+[project.markdown_extensions.pymdownx.highlight]
+pygments_lang_class = true
+
+[project.markdown_extensions.pymdownx.superfences]
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["zzupy"]
+inventories = [
+    "https://docs.python.org/3/objects.inv",
+    "https://mkdocstrings.github.io/objects.inv",
+    "https://mkdocstrings.github.io/autorefs/objects.inv",
+    "https://mkdocstrings.github.io/griffe/objects.inv",
+    "https://python-markdown.github.io/objects.inv",
+]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_options.ignore_init_summary = true
+docstring_section_style = "list"
+filters = ["public"]
+heading_level = 1
+inherited_members = true
+line_length = 88
+merge_init_into_class = true
+parameter_headings = true
+type_parameter_headings = true
+preload_modules = ["mkdocstrings"]
+relative_crossrefs = true
+scoped_crossrefs = true
+separate_signature = true
+show_bases = false
+show_inheritance_diagram = true
+show_root_heading = true
+show_root_full_path = false
+show_signature_annotations = true
+show_signature_type_parameters = true
+show_source = false
+show_submodules = true
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+signature_crossrefs = true
+summary = true
+unwrap_annotated = true
+members_order = "source"

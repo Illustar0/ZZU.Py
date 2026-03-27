@@ -79,7 +79,9 @@ with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as cli
 项目使用 `uv` 管理环境，常用命令：
 
 ```bash
-uv sync
+uv sync --extra docs
+uv run zensical serve
+uv run zensical build
 ruff check
 uv build
 ```
