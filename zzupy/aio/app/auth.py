@@ -8,11 +8,13 @@ from typing import Final
 
 import httpx
 import jwt
+from pydantic import ValidationError
 
 from zzupy.aio.app.interfaces import ICASClient
 from zzupy.crypto import RSAPublicKey, padding, serialization
-from zzupy.exception import LoginError, ParsingError, NetworkError
+from zzupy.exception import LoginError, ParsingError, NetworkError, OperationError
 from zzupy.logging import build_http_event_hooks, log_http_response_body, logger
+from zzupy.model.auth import PersonalInfo, PersonalInfoCardModel, PersonalInfoModel
 from zzupy.utils import require_auth
 
 
@@ -25,6 +27,10 @@ class CASClient(ICASClient):
 
     PUBLIC_KEY_URL: Final = "https://cas.s.zzu.edu.cn/token/jwt/publicKey"
     LOGIN_URL: Final = "https://cas.s.zzu.edu.cn/token/password/passwordLogin"
+    PERSONAL_INFO_URL: Final = (
+        "https://authx-service.s.zzu.edu.cn/personal/api/v1/personal/me/user"
+    )
+    PERSONAL_INFO_CARD_URL: Final = "https://info.s.zzu.edu.cn/portal-api/v1/thrid-adapter/get-person-info-card-list"
 
     JWT_ALGORITHMS: Final = ["RS512"]
 
@@ -271,6 +277,132 @@ class CASClient(ICASClient):
                 "网络连接异常",
                 context={"url": self.LOGIN_URL},
             ) from exc
+
+    @require_auth
+    async def get_user_info(self) -> PersonalInfo:
+        """获取当前用户的聚合个人信息。
+
+        返回学号、姓名、身份类型、学院、邮箱未读数、一卡通余额和科研信息数量。
+
+        Returns:
+            当前用户的个人信息
+
+        Raises:
+            OperationError: 如果服务端返回失败结果。
+            ParsingError: 如果响应解析失败。
+            NetworkError: 如果网络请求失败。
+        """
+        url = f"{self.PERSONAL_INFO_URL}"
+        try:
+            headers = {"X-Id-Token": self._user_token}
+            response = await self._client.get(url, headers=headers)
+            response.raise_for_status()
+            log_http_response_body(
+                url,
+                response.text,
+                content_type=response.headers.get("content-type"),
+            )
+
+            response_data = response.json()
+
+        except httpx.HTTPStatusError as exc:
+            logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": url},
+            ) from exc
+        except (json.JSONDecodeError, TypeError) as exc:
+            logger.error("从 {} 响应中提取数据失败: {}", url, exc)
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
+        except httpx.RequestError as exc:
+            logger.error("{} 请求失败: {}", url, exc)
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": url},
+            ) from exc
+
+        if response_data["code"] != 0:
+            logger.error("服务器返回消息 {}", response_data["message"])
+            raise OperationError(f"服务器返回消息 {response_data['message']}")
+
+        try:
+            personal_info_data = PersonalInfoModel.model_validate(response_data)
+        except ValidationError as exc:
+            logger.error("从 {} 响应中解析数据失败: {}", url, exc)
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
+
+        url = f"{self.PERSONAL_INFO_CARD_URL}"
+        try:
+            headers = {"X-Id-Token": self._user_token}
+            response = await self._client.get(url, headers=headers)
+            response.raise_for_status()
+            log_http_response_body(
+                url,
+                response.text,
+                content_type=response.headers.get("content-type"),
+            )
+
+            response_data = response.json()
+
+        except httpx.HTTPStatusError as exc:
+            logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
+            raise OperationError.from_http_status(
+                exc,
+                "服务器返回错误状态",
+                context={"url": url},
+            ) from exc
+        except (json.JSONDecodeError, TypeError) as exc:
+            logger.error("从 {} 响应中提取数据失败: {}", url, exc)
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
+        except httpx.RequestError as exc:
+            logger.error("{} 请求失败: {}", url, exc)
+            raise NetworkError.from_exception(
+                exc,
+                "网络连接异常",
+                context={"url": url},
+            ) from exc
+
+        if response_data["code"] != 0:
+            logger.error("服务器返回消息 {}", response_data["message"])
+            raise OperationError(f"服务器返回消息 {response_data['message']}")
+
+        try:
+            personal_info_card_data = PersonalInfoCardModel.model_validate(
+                response_data
+            )
+        except ValidationError as exc:
+            logger.error("从 {} 响应中解析数据失败: {}", url, exc)
+            raise ParsingError.from_exception(
+                exc,
+                "服务器响应格式不正确",
+                context={"url": url},
+            ) from exc
+
+        return PersonalInfo(
+            uid=personal_info_data.data.attributes.user_uid,
+            name=personal_info_data.data.attributes.user_name,
+            student_type=personal_info_data.data.attributes.identity_type_name,
+            student_type_id=personal_info_data.data.attributes.identity_type_id,
+            college=personal_info_data.data.attributes.organization_name,
+            college_id=personal_info_data.data.attributes.organization_id,
+            unread_email_count=int(personal_info_card_data.data[0].amount),
+            balance=float(personal_info_card_data.data[1].amount),
+            research_count=int(personal_info_card_data.data[2].amount),
+        )
 
     @require_auth
     def logout(self) -> None:

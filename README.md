@@ -1,5 +1,7 @@
 # ZZU.Py
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Illustar0/ZZU.Py)    
+
 豫见郑大相关服务的 Python API 封装。
 
 ## 概述
@@ -84,6 +86,7 @@ with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as cli
 
 - 使用文档：<https://illustar0.github.io/ZZU.Py/>
 - API 参考：<https://illustar0.github.io/ZZU.Py/reference/api/>
+- 文档站点由 `Zensical` 构建
 
 ## 开发
 
@@ -91,6 +94,9 @@ with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as cli
 
 ```bash
 uv sync --extra develop,docs
+uv run python scripts/generate_api_reference.py
+uv run zensical serve
+uv run zensical build
 ruff format zzupy
 ruff check zzupy
 ty check zzupy

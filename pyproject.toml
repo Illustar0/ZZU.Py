@@ -27,19 +27,8 @@ develop = [
 ]
 
 docs = [
-    "markdown-callouts>=0.4.0",
-    "markdown-exec>=1.11.0",
-    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
-    "mkdocs-llmstxt>=0.3.1",
-    "mkdocs-minify-plugin>=0.8.0",
-    "mkdocs-redirects>=1.2.2",
-    "mkdocs-section-index>=0.3.10",
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.20",
-    "mkdocstrings>=0.30.0",
     "mkdocstrings[python]>=0.30.0",
-    "jieba>=0.42.1",
-    "mkdocs-include-markdown-plugin>=7.1.7",
+    "zensical>=0.0.11",
 ]
 
 
