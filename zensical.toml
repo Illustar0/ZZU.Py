@@ -74,6 +74,7 @@ filters = ["public"]
 heading_level = 1
 inherited_members = true
 line_length = 88
+members = true
 merge_init_into_class = true
 parameter_headings = true
 type_parameter_headings = true

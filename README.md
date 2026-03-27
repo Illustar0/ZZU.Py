@@ -94,6 +94,7 @@ with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as cli
 
 ```bash
 uv sync --extra develop,docs
+uv run python scripts/generate_api_reference.py
 uv run zensical serve
 uv run zensical build
 ruff format zzupy
