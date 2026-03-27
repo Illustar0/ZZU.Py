@@ -27,9 +27,6 @@ nav = [
     { "API" = "reference/api.md" },
 ]
 
-[project.theme]
-variant = "classic"
-
 [project.markdown_extensions.abbr]
 
 [project.markdown_extensions.admonition]

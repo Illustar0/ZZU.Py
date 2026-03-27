@@ -1,7 +1,5 @@
 ---
 title: API
-hide:
-- navigation
 ---
 
 此页由 `Zensical` 配合 `mkdocstrings` 根据源码自动生成，适合在以下场景使用：
