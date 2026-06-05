@@ -9,7 +9,7 @@ license = "MIT"
 dependencies = [
     "beautifulsoup4>=4.13.3",
     "gmalg>=1.0.6",
-    "httpx>=0.28.1",
+    "httpx2>=2.3.0",
     "icalendar>=7.0.3",
     "ifaddr>=0.2.0",
     "loguru>=0.7.3",
@@ -24,6 +24,7 @@ develop = [
     "ruff>=0.14.13",
     "ty>=0.0.23",
     "pre-commit>=4.5.1",
+    "pyrefly>=0.60.0",
 ]
 
 docs = [

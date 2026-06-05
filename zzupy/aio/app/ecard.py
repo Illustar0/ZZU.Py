@@ -8,7 +8,7 @@ from typing import Final
 from urllib.parse import urlparse, parse_qs
 
 import gmalg
-import httpx
+import httpx2
 
 from zzupy.aio.app.interfaces import ICASClient
 from zzupy.exception import (
@@ -51,7 +51,7 @@ class ECardClient:
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
-        self._client = httpx.AsyncClient(
+        self._client = httpx2.AsyncClient(
             event_hooks=build_http_event_hooks(async_client=True)
         )
         self._cas_client = cas_client
@@ -119,7 +119,7 @@ class ECardClient:
             self._tid = query_params["tid"][0]
             logger.info("成功获取 tid")
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("获取 tid 请求返回失败状态码: {}", exc.response.status_code)
             raise NetworkError.from_http_status(
                 exc,
@@ -133,7 +133,7 @@ class ECardClient:
                 "服务器响应格式不正确",
                 context={"url": self.TID_URL},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("获取 tid 网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -205,7 +205,7 @@ class ECardClient:
 
             logger.info("成功获取 accessToken 和 refreshToken")
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("获取 token 请求返回失败状态码: {}", exc.response.status_code)
             raise NetworkError.from_http_status(
                 exc,
@@ -219,7 +219,7 @@ class ECardClient:
                 "服务器响应格式不正确",
                 context={"url": self.TOKEN_URL},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("获取 token 网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -307,7 +307,7 @@ class ECardClient:
             self._default_room = room
             return room
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("获取默认房间请求返回失败状态码: {}", exc.response.status_code)
             raise NetworkError.from_http_status(
                 exc,
@@ -321,7 +321,7 @@ class ECardClient:
                 "服务器响应格式不正确",
                 context={"url": self.CONFIG_URL},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("获取默认房间网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -437,7 +437,7 @@ class ECardClient:
 
             logger.info("成功为房间 {} 充值 {} 元", room, amt)
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("充值请求返回失败状态码: {}", exc.response.status_code)
             raise NetworkError.from_http_status(
                 exc,
@@ -451,7 +451,7 @@ class ECardClient:
                 "服务器响应格式不正确",
                 context={"url": self.PAY_URL, "room": room},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("充值网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -497,7 +497,7 @@ class ECardClient:
             logger.info("获取校园卡余额成功: {} 元", balance)
             return balance
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("获取余额请求返回失败状态码: {}", exc.response.status_code)
             raise NetworkError.from_http_status(
                 exc,
@@ -517,7 +517,7 @@ class ECardClient:
                 "服务器响应格式不正确",
                 context={"url": self.BALANCE_URL},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("获取余额网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -618,7 +618,7 @@ class ECardClient:
             logger.info("成功获取房间列表，共 {} 个房间", len(room_dict))
             return room_dict
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("获取房间列表请求返回失败状态码: {}", exc.response.status_code)
             raise NetworkError.from_http_status(
                 exc,
@@ -632,7 +632,7 @@ class ECardClient:
                 "服务器响应格式不正确",
                 context={"url": self.LOCATION_URL, "room_id": room_id},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("获取房间列表网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -713,7 +713,7 @@ class ECardClient:
             logger.info("房间 {} 剩余电量: {} 度", room, remaining_energy)
             return remaining_energy
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("获取剩余电量请求返回失败状态码: {}", exc.response.status_code)
             raise NetworkError.from_http_status(
                 exc,
@@ -733,7 +733,7 @@ class ECardClient:
                 "服务器响应格式不正确",
                 context={"url": self.ACCOUNT_URL, "room": room},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("获取剩余电量网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
