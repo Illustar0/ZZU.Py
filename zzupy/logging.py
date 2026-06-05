@@ -4,7 +4,7 @@ import json
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-import httpx
+import httpx2
 
 from loguru import logger as _logger
 
@@ -67,7 +67,7 @@ def _sanitize_value(key: str | None, value: Any) -> Any:
     return value
 
 
-def sanitize_http_headers(headers: httpx.Headers) -> dict[str, str]:
+def sanitize_http_headers(headers: httpx2.Headers) -> dict[str, str]:
     """脱敏并标准化 HTTP 头，便于安全输出到日志。"""
     return {
         key: _REDACTED if _is_sensitive_key(key) else value
@@ -75,7 +75,7 @@ def sanitize_http_headers(headers: httpx.Headers) -> dict[str, str]:
     }
 
 
-def sanitize_http_url(url: str | httpx.URL) -> str:
+def sanitize_http_url(url: str | httpx2.URL) -> str:
     """脱敏 URL 查询参数。"""
     parsed = urlsplit(str(url))
     if not parsed.query:
@@ -145,7 +145,7 @@ def sanitize_http_body(
 
 def log_http_headers(
     message: str,
-    headers: httpx.Headers,
+    headers: httpx2.Headers,
     *,
     level: str = "TRACE",
 ) -> None:
@@ -154,7 +154,7 @@ def log_http_headers(
 
 
 def log_http_response_body(
-    url: str | httpx.URL,
+    url: str | httpx2.URL,
     text: str,
     *,
     content_type: str | None = None,
@@ -172,7 +172,7 @@ def log_http_response_body(
 def build_http_event_hooks(*, async_client: bool = False) -> dict[str, list[Any]]:
     """创建带脱敏能力的 HTTP 请求/响应日志钩子。"""
 
-    def log_request(request: httpx.Request) -> None:
+    def log_request(request: httpx2.Request) -> None:
         sanitized_url = sanitize_http_url(request.url)
         logger.trace(">>> {} {}", request.method, sanitized_url)
         log_http_headers(">>> Headers", request.headers)
@@ -184,7 +184,7 @@ def build_http_event_hooks(*, async_client: bool = False) -> dict[str, list[Any]
         if body:
             logger.trace(">>> Body: {}", body)
 
-    def log_response(response: httpx.Response) -> None:
+    def log_response(response: httpx2.Response) -> None:
         request = response.request
         sanitized_url = sanitize_http_url(request.url)
         logger.trace(
@@ -194,10 +194,10 @@ def build_http_event_hooks(*, async_client: bool = False) -> dict[str, list[Any]
 
     if async_client:
 
-        async def async_request_logger(request: httpx.Request) -> None:
+        async def async_request_logger(request: httpx2.Request) -> None:
             log_request(request)
 
-        async def async_response_logger(response: httpx.Response) -> None:
+        async def async_response_logger(response: httpx2.Response) -> None:
             log_response(response)
 
         return {

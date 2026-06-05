@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Self
 
-import httpx
+import httpx2
 
 
 class ZZUError(Exception):
@@ -72,7 +72,7 @@ class ZZUError(Exception):
     @classmethod
     def from_http_status(
         cls,
-        exc: httpx.HTTPStatusError,
+        exc: httpx2.HTTPStatusError,
         message: str | None = None,
         *,
         context: Mapping[str, Any] | None = None,
@@ -143,6 +143,12 @@ class DataNotFoundError(OperationError, LookupError):
     default_message = "请求的数据不存在"
 
 
+class MFAError(LoginError):
+    """MFA 状态错误，当前会话可能需要 MFA 验证"""
+
+    default_message = "MFA 状态错误，当前会话可能需要 MFA 验证"
+
+
 __all__ = [
     "AuthenticationError",
     "ClientStateError",
@@ -154,4 +160,5 @@ __all__ = [
     "OperationError",
     "ParsingError",
     "ZZUError",
+    "MFAError",
 ]

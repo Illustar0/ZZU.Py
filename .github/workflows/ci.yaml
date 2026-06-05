@@ -13,9 +13,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0
 
       - name: Set up Python
         run: uv python install
@@ -23,7 +26,7 @@ jobs:
       - name: Build
         id: build
         run: |
-          uv sync
+          uv sync --locked --all-extras
           uv build
 
       - name: Upload Artifact

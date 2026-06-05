@@ -22,10 +22,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0
 
       - name: Set up Python
         run: uv python install
@@ -33,13 +33,13 @@ jobs:
       - name: Build static files
         id: build
         run: |
-          uv sync --extra docs
+          uv sync --locked --extra docs
           uv run python scripts/generate_api_reference.py
           uv run zensical build
 
       - name: Upload static files as artifact
         id: deployment
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site/
 

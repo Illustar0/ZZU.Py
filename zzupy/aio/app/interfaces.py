@@ -12,6 +12,10 @@ class ICASClient(ABC):
     async def login(self, force_login: bool = False) -> None:
         pass
 
+    @abstractmethod
+    def set_device(self, device_id: str) -> None:
+        pass
+
     @property
     @abstractmethod
     def user_token(self) -> str | None:

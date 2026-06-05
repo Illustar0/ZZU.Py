@@ -9,9 +9,8 @@ import urllib.parse
 from typing import List
 from urllib.parse import parse_qs
 
-import httpx
+import httpx2
 import ifaddr
-from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
 from zzupy.exception import (
@@ -23,6 +22,7 @@ from zzupy.exception import (
 )
 from zzupy.model.network import AuthResult, OnlineDevice, PortalInfo
 from zzupy.utils import (
+    extract_first_html_attr,
     get_local_ip,
     JsonPParser,
     XorCipher,
@@ -43,9 +43,7 @@ def discover_portal_info() -> PortalInfo:
 
     def _parse_portal_redirect(html_content: str) -> str:
         """解析Portal重定向链接"""
-        soup = BeautifulSoup(html_content, features="html.parser")
-        a_tag = soup.find("a")
-        href = None if a_tag is None else a_tag.get("href")
+        href = extract_first_html_attr(html_content, "a", "href")
         if not isinstance(href, str):
             raise ParsingError("无法解析网页认证 URL")
         return href
@@ -70,7 +68,7 @@ def discover_portal_info() -> PortalInfo:
         parsed = urllib.parse.urlparse(portal_url)
         return f"{parsed.scheme}://{parsed.netloc}"
 
-    def _get_portal_server_url(client: httpx.Client, auth_url: str) -> str:
+    def _get_portal_server_url(client: httpx2.Client, auth_url: str) -> str:
         """获取 Portal 服务器 URL"""
         DEFAULT_HTTP_PORT = 801
         DEFAULT_HTTPS_PORT = 802
@@ -100,7 +98,7 @@ def discover_portal_info() -> PortalInfo:
         return {key: int(value) for key, value in matches}
 
     try:
-        with httpx.Client(timeout=10.0) as client:
+        with httpx2.Client(timeout=10.0) as client:
             response = client.get("http://bilibili.com", follow_redirects=True)
 
             if str(response.url).startswith("https://"):
@@ -121,7 +119,7 @@ def discover_portal_info() -> PortalInfo:
                 auth_url=auth_url, portal_server_url=portal_server_url, user_ip=user_ip
             )
 
-    except httpx.RequestError as exc:
+    except httpx2.RequestError as exc:
         raise NetworkError.from_exception(exc, f"网络请求失败: {exc}") from exc
     except ZZUError:
         raise
@@ -159,13 +157,13 @@ class EPortalClient:
             ]
 
             if self._bind_address in local_ips:
-                transport = httpx.HTTPTransport(local_address=self._bind_address)
+                transport = httpx2.HTTPTransport(local_address=self._bind_address)
             else:
-                transport = httpx.HTTPTransport()
+                transport = httpx2.HTTPTransport()
 
         else:
-            transport = httpx.HTTPTransport(local_address=self._bind_address)
-        self._client = httpx.Client(
+            transport = httpx2.HTTPTransport(local_address=self._bind_address)
+        self._client = httpx2.Client(
             transport=transport,
         )
 
@@ -250,7 +248,7 @@ class EPortalClient:
             response.raise_for_status()
             res_json = json.loads(JsonPParser(response.text).data)
             return AuthResult.model_validate(res_json)
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -288,7 +286,7 @@ class SelfServiceSystem:
     """自助服务系统"""
 
     def __init__(self, base_url: str):
-        self._client = httpx.Client(base_url=base_url)
+        self._client = httpx2.Client(base_url=base_url)
         self._logged_in = False
 
     def __enter__(self):
@@ -317,13 +315,16 @@ class SelfServiceSystem:
             response.raise_for_status()
 
             # 提取checkcode
-            soup = BeautifulSoup(response.text, features="html.parser")
-            checkcode_inputs = soup.find_all("input", attrs={"name": "checkcode"})
-            if not checkcode_inputs:
+            checkcode = extract_first_html_attr(
+                response.text,
+                "input",
+                "value",
+                match_attrs={"name": "checkcode"},
+            )
+            if not isinstance(checkcode, str):
                 raise ParsingError(
                     "解析 HTML 失败，无法在登录页面上找到 'checkcode'。页面结构可能已更改。"
                 )
-            checkcode = checkcode_inputs[0]["value"]
 
             # 不能少
             self._client.get(
@@ -348,7 +349,7 @@ class SelfServiceSystem:
                 raise LoginError("登录失败。这可能是因为账户和密码不正确。")
             self._logged_in = True
             return None
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -380,7 +381,7 @@ class SelfServiceSystem:
             response.raise_for_status()
             response_data = response.json()
             return [OnlineDevice(**device) for device in response_data]
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -413,13 +414,13 @@ class SelfServiceSystem:
                 params=params,
             )
             response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             raise OperationError.from_http_status(
                 exc,
                 "服务器返回错误状态",
                 context={"url": "/Self/dashboard/tooffline", "session_id": session_id},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -437,7 +438,7 @@ class SelfServiceSystem:
             self._client.get(
                 "/Self/login/logout",
             )
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",

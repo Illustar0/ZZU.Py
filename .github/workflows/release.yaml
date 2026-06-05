@@ -2,62 +2,57 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      prerelease:
-        description: 'Create a prerelease (alpha/beta/rc)'
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   release:
     runs-on: ubuntu-latest
     concurrency: release
 
-    permissions:
-      id-token: write
-      contents: write
-
     steps:
-      # Note: we need to checkout the repository at the workflow sha in case during the workflow
-      # the branch was updated. To keep PSR working with the configured release branches,
-      # we force a checkout of the desired release branch but at the workflow sha HEAD.
-      - name: Setup | Checkout Repository at workflow sha
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
 
-      - name: Setup | Force correct release branch on workflow sha
+      - name: Force correct release branch on workflow sha
         run: |
           git checkout -B ${{ github.ref_name }} ${{ github.sha }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0
 
       - name: Set up Python
         run: uv python install
 
-      - name: Action | Semantic Version Release
-        id: release
-        # Adjust tag with desired version if applicable.
-        uses: python-semantic-release/python-semantic-release@v9.21.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          prerelease: ${{ github.event.inputs.prerelease }}
+      - name: Calculate next version
+        id: version
+        run: |
+          tag="$(npx --yes git-cliff --config cliff.toml --bumped-version)"
+          version="${tag#v}"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog
+        run: |
+          npx --yes git-cliff --config cliff.toml --unreleased --tag ${{ steps.version.outputs.tag }} --output "${{ runner.temp }}\release-notes.md"
+
+      - name: Build distribution
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          uv build
 
       - name: Publish | Upload package to PyPI
-        if: steps.release.outputs.released == 'true'
         run: |
           uv publish --token ${{ secrets.PYPI_TOKEN }}
-          
 
-      - name: Publish | Upload to GitHub Release Assets
-        uses: python-semantic-release/publish-action@v9.21.1
-        if: steps.release.outputs.released == 'true'
+      - name: Release
+        uses: softprops/action-gh-release@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release.outputs.tag }}
-
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.version.outputs.tag }}
+          body_path: ${{ runner.temp }}\release-notes.md
+          files: dist/*
+          fail_on_unmatched_files: true
