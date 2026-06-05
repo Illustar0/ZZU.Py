@@ -57,5 +57,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: ${{ steps.version.outputs.tag }}
           body_path: ${{ runner.temp }}\release-notes.md
-          files: dist/*
+          files: |
+            dist/*  
+            !dist/.gitignore
           fail_on_unmatched_files: true
