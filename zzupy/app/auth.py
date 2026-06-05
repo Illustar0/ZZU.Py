@@ -64,6 +64,7 @@ class CASClient(ICASClient):
         self._refresh_token: str | None = None
         self._logged_in: bool = False
         self._refresh_timer: threading.Timer | None = None
+        self._device_id = "ZZU.Py"
         self.mfa = self.MFAClient(self)
 
     def __enter__(self) -> "CASClient":
@@ -81,6 +82,15 @@ class CASClient(ICASClient):
         """
         self._user_token = user_token
         self._refresh_token = refresh_token
+
+    def set_device(self, device_id: str) -> None:
+        """设置认证请求使用的设备标识。
+
+        Args:
+            device_id: 登录和 MFA 检测请求中的 `deviceId`。
+        """
+        self._device_id = device_id
+        self.mfa.reset()
 
     @property
     def user_token(self) -> str | None:
@@ -252,7 +262,7 @@ class CASClient(ICASClient):
             params = {
                 "username": encrypted_account,
                 "password": encrypted_password,
-                "deviceId": "ZZU.Py",
+                "deviceId": self._cas._device_id,
             }
 
             try:
@@ -554,8 +564,8 @@ class CASClient(ICASClient):
             "appId": self.APP_ID,
             "osType": self.OS_TYPE,
             "geo": "",
-            "deviceId": "ZZU.Py",
-            "clientId": "ZZU.Py",
+            "deviceId": self._device_id,
+            "clientId": "",
             "mfaState": self.mfa.state,
         }
 
