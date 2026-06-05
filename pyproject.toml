@@ -9,26 +9,26 @@ license = "MIT"
 dependencies = [
     "gmalg>=1.0.6",
     "httpx2>=2.3.0",
-    "icalendar>=7.0.3",
+    "icalendar>=7.1.2",
     "ifaddr>=0.2.0",
     "loguru>=0.7.3",
-    "pydantic>=2.11.7",
-    "pyjwt>=2.12.1",
+    "pydantic>=2.13.4",
+    "pyjwt>=2.13.0",
     "typing-extensions>=4.12.2",
-    "whenever>=0.9.5",
+    "whenever>=0.10.0",
 ]
 
 [project.optional-dependencies]
 develop = [
-    "ruff>=0.14.13",
-    "ty>=0.0.23",
-    "pre-commit>=4.5.1",
+    "ruff>=0.15.16",
+    "ty>=0.0.44",
+    "pre-commit>=4.6.0",
     "pyrefly>=0.60.0",
 ]
 
 docs = [
-    "mkdocstrings[python]>=0.30.0",
-    "zensical>=0.0.11",
+    "mkdocstrings[python]>=0.30.1,<1",
+    "zensical>=0.0.44",
 ]
 
 
