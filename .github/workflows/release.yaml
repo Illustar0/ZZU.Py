@@ -29,7 +29,10 @@ jobs:
         id: version
         run: |
           tag="$(npx --yes git-cliff --config cliff.toml --bumped-version)"
+          version="${tag#v}"
+
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Generate changelog
         run: |

@@ -1047,7 +1047,6 @@ wheels = [
 
 [[package]]
 name = "zzupy"
-version = "7.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "gmalg" },
