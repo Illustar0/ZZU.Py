@@ -23,7 +23,7 @@
 ## Code Conventions
 
 - Follow the existing Chinese-first documentation style for docstrings, logs, and user-facing error messages unless a file already uses another style.
-- Keep implementations simple and explicit. This codebase prefers straightforward `httpx` request flows over heavy abstraction.
+- Keep implementations simple and explicit. This codebase prefers straightforward `httpx2` request flows over heavy abstraction.
 - Reuse the existing exception types from `zzupy/exception.py` instead of raising generic exceptions for domain failures.
 - Preserve the current logging style with `loguru`, including request/response diagnostics where a module already uses them.
 - Keep type hints modern and consistent with the codebase, including `| None` unions and Pydantic v2 APIs such as `model_validate`.

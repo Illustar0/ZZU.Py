@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Self
 
-import httpx
+import httpx2
 
 
 class ZZUError(Exception):
@@ -72,7 +72,7 @@ class ZZUError(Exception):
     @classmethod
     def from_http_status(
         cls,
-        exc: httpx.HTTPStatusError,
+        exc: httpx2.HTTPStatusError,
         message: str | None = None,
         *,
         context: Mapping[str, Any] | None = None,
