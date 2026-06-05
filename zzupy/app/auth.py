@@ -223,7 +223,6 @@ class CASClient(ICASClient):
             self._client = self._cas._client
             self.state = ""
             self.gid = ""
-            self.secure_phone = ""
             self.attest_server_url = ""
             self.required = False
             self.secure_phone_available = False
@@ -233,7 +232,6 @@ class CASClient(ICASClient):
             """清除当前 MFA 流程状态。"""
             self.state = ""
             self.gid = ""
-            self.secure_phone = ""
             self.attest_server_url = ""
             self.required = False
             self.secure_phone_available = False
@@ -306,7 +304,6 @@ class CASClient(ICASClient):
                 mfa_data = data["data"]
                 self.state = mfa_data["state"]
                 self.gid = ""
-                self.secure_phone = ""
                 self.attest_server_url = ""
                 self.required = bool(mfa_data["need"])
                 self.secure_phone_available = bool(
@@ -338,11 +335,8 @@ class CASClient(ICASClient):
                     context={"url": self._cas.MFA_DETECT_URL},
                 ) from exc
 
-        def _init_secure_phone(self) -> str:
+        def _init_secure_phone(self) -> None:
             """初始化手机号 MFA。
-
-            Returns:
-                脱敏手机号。
 
             Raises:
                 LoginError: 如果当前登录不需要 MFA 验证。
@@ -386,10 +380,8 @@ class CASClient(ICASClient):
 
                 mfa_data = data["data"]
                 self.gid = mfa_data["gid"]
-                self.secure_phone = mfa_data["securePhone"]
                 self.attest_server_url = mfa_data.get("attestServerUrl") or ""
                 logger.info("手机号 MFA 初始化成功")
-                return self.secure_phone
 
             except httpx2.HTTPStatusError as exc:
                 logger.error(
@@ -417,13 +409,10 @@ class CASClient(ICASClient):
                     context={"url": self._cas.MFA_SECURE_PHONE_INIT_URL},
                 ) from exc
 
-        def request_sms_code(self) -> str:
+        def request_sms_code(self) -> None:
             """发送 MFA 短信验证码。
 
             如果尚未初始化手机号 MFA，会自动调用内部初始化流程。
-
-            Returns:
-                接收验证码的脱敏手机号。
 
             Raises:
                 LoginError: 如果当前登录不需要 MFA 验证。
@@ -458,7 +447,7 @@ class CASClient(ICASClient):
 
                 data["data"]["result"]
                 logger.info("MFA 短信验证码发送成功")
-                return self.secure_phone
+                return None
 
             except httpx2.HTTPStatusError as exc:
                 logger.error(
@@ -486,14 +475,14 @@ class CASClient(ICASClient):
                     context={"url": url},
                 ) from exc
 
-        def send_sms(self) -> str:
+        def send_sms(self) -> None:
             """[`request_sms_code()`][zzupy.app.auth.CASClient.MFAClient.request_sms_code] 的别名。"""
             return self.request_sms_code()
 
         def verify_sms_code(self, code: str) -> str:
             """校验 MFA 短信验证码。
 
-            如果尚未初始化手机号 MFA，会自动调用内部初始化流程。
+            调用前必须先发送 MFA 短信验证码。
             校验成功后，[`CASClient.login()`][zzupy.app.auth.CASClient.login]
             会使用当前 MFA state 完成登录。
 
@@ -504,13 +493,14 @@ class CASClient(ICASClient):
                 可用于登录的 MFA state。
 
             Raises:
-                LoginError: 如果验证码校验失败，或当前登录不需要 MFA 验证。
+                MFAError: 如果尚未发送 MFA 短信验证码。
+                LoginError: 如果验证码校验失败。
                 OperationError: 如果服务器返回失败状态。
                 ParsingError: 如果服务器响应无法解析。
                 NetworkError: 如果出现网络错误。
             """
             if not self.gid:
-                self._init_secure_phone()
+                raise MFAError("MFA 状态错误，请先发送短信验证码。")
 
             url = self._attest_url("api/guard/securephone/valid")
             try:
@@ -593,9 +583,13 @@ class CASClient(ICASClient):
         """
         if self._public_key is None:
             self._public_key = self._get_public_key()
-        if self.mfa.state == "":
-            if not self.mfa.is_required():
-                raise MFAError("MFA 状态错误，当前会话可能需要 MFA 验证")
+
+        if self.mfa.state:
+            mfa_state_invalid = self.mfa.required and not self.mfa.verified
+        else:
+            mfa_state_invalid = not self.mfa.is_required()
+        if mfa_state_invalid:
+            raise MFAError("MFA 状态错误，当前会话可能需要 MFA 验证")
 
         if not force_login:
             if self._user_token is None or self._refresh_token is None:
