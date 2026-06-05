@@ -31,6 +31,10 @@ jobs:
           tag="$(npx --yes git-cliff --config cliff.toml --bumped-version)"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      - name: Generate changelog
+        run: |
+          npx --yes git-cliff --config cliff.toml --unreleased --tag ${{ steps.version.outputs.tag }} --output "${{ runner.temp }}\release-notes.md"
+
       - name: Build distribution
         run: |
           git tag "${{ steps.version.outputs.tag }}"
@@ -46,5 +50,6 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: ${{ steps.version.outputs.tag }}
+          body_path: ${{ runner.temp }}\release-notes.md
           files: dist/*
           fail_on_unmatched_files: true
