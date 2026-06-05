@@ -1,11 +1,11 @@
 [project]
 name = "zzupy"
-version = "7.0.0"
 description = "豫见郑大的 Python API 封装 / An API wrapper for Zhengzhou University Mobile Campus written in Python."
 authors = [{ name = "Illustar0", email = "me@illustar0.com" }]
 requires-python = ">=3.11"
 readme = "README.md"
 license = "MIT"
+dynamic = ["version"]
 dependencies = [
     "gmalg>=1.0.6",
     "httpx2>=2.3.0",
@@ -37,5 +37,8 @@ Repository = "https://github.com/Illustar0/ZZU.Py"
 Documentation = "https://illustar0.github.io/ZZU.Py"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"

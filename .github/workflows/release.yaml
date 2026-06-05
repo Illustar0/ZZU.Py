@@ -28,13 +28,12 @@ jobs:
       - name: Calculate next version
         id: version
         run: |
-          semver="$(npx --yes git-cliff --config cliff.toml --bumped-version)"
-          tag="v${semver}"
+          tag="$(npx --yes git-cliff --config cliff.toml --bumped-version)"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Build distribution
         run: |
-          uv sync --locked --all-extras
+          git tag "${{ steps.version.outputs.tag }}"
           uv build
 
       - name: Publish | Upload package to PyPI
@@ -42,9 +41,10 @@ jobs:
           uv publish --token ${{ secrets.PYPI_TOKEN }}
 
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: ${{ steps.version.outputs.tag }}
           files: dist/*
           fail_on_unmatched_files: true
