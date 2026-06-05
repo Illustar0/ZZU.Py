@@ -23,7 +23,7 @@ jobs:
       - name: Build
         id: build
         run: |
-          uv sync
+          uv sync --locked --all-extras
           uv build
 
       - name: Upload Artifact
