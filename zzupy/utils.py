@@ -4,12 +4,54 @@ import hashlib
 import re
 import socket
 from functools import wraps
+from html.parser import HTMLParser
 from typing import Dict
 from urllib.parse import parse_qs
 
 import gmalg
 
 from zzupy.exception import NotLoggedInError
+
+
+class _FirstHtmlAttributeParser(HTMLParser):
+    def __init__(
+        self,
+        tag: str,
+        attr: str,
+        match_attrs: dict[str, str] | None = None,
+    ) -> None:
+        super().__init__(convert_charrefs=True)
+        self._tag = tag.lower()
+        self._attr = attr.lower()
+        self._match_attrs = {
+            key.lower(): value for key, value in (match_attrs or {}).items()
+        }
+        self._found = False
+        self.value: str | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if self._found or tag.lower() != self._tag:
+            return
+
+        attrs_map = {key.lower(): value for key, value in attrs}
+        if any(attrs_map.get(key) != value for key, value in self._match_attrs.items()):
+            return
+
+        self._found = True
+        self.value = attrs_map.get(self._attr)
+
+
+def extract_first_html_attr(
+    html_content: str,
+    tag: str,
+    attr: str,
+    match_attrs: dict[str, str] | None = None,
+) -> str | None:
+    """提取第一个匹配 HTML 标签的属性值。"""
+    parser = _FirstHtmlAttributeParser(tag, attr, match_attrs)
+    parser.feed(html_content)
+    parser.close()
+    return parser.value
 
 
 def get_sign(dynamic_secret: str, params: str) -> str:
