@@ -11,7 +11,6 @@ from urllib.parse import parse_qs
 
 import httpx2
 import ifaddr
-from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
 from zzupy.exception import (
@@ -23,6 +22,7 @@ from zzupy.exception import (
 )
 from zzupy.model.network import AuthResult, OnlineDevice, PortalInfo
 from zzupy.utils import (
+    extract_first_html_attr,
     get_local_ip,
     JsonPParser,
     XorCipher,
@@ -43,9 +43,7 @@ async def discover_portal_info() -> PortalInfo:
 
     def _parse_portal_redirect(html_content: str) -> str:
         """解析Portal重定向链接"""
-        soup = BeautifulSoup(html_content, features="html.parser")
-        a_tag = soup.find("a")
-        href = None if a_tag is None else a_tag.get("href")
+        href = extract_first_html_attr(html_content, "a", "href")
         if not isinstance(href, str):
             raise ParsingError("无法解析网页认证 URL")
         return href
@@ -318,13 +316,16 @@ class SelfServiceSystem:
             response.raise_for_status()
 
             # 提取checkcode
-            soup = BeautifulSoup(response.text, features="html.parser")
-            checkcode_inputs = soup.find_all("input", attrs={"name": "checkcode"})
-            if not checkcode_inputs:
+            checkcode = extract_first_html_attr(
+                response.text,
+                "input",
+                "value",
+                match_attrs={"name": "checkcode"},
+            )
+            if not isinstance(checkcode, str):
                 raise ParsingError(
                     "解析 HTML 失败，无法在登录页面上找到 'checkcode'。页面结构可能已更改。"
                 )
-            checkcode = checkcode_inputs[0]["value"]
 
             # 不能少
             await self._client.get(
