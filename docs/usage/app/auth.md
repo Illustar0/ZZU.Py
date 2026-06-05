@@ -72,8 +72,8 @@ print(cas.refresh_token)
 
 #### 2. 抓包并使用常用设备的 deviceId 并将其添加为可信设备
 
-对你的常用设备上的“豫见郑大” APP 进行抓包，获取其 `deviceId`。  
-接着前往[安全中心](https://authx-service.s.zzu.edu.cn/security-center/eqIP-management)，将设备 ID 显示为 `your_deviceId` 的设备设置为可信设备。   
+对你的常用设备上的“豫见郑大” APP 进行抓包，获取其 `deviceId`。我们假设它是 `鸣潮牛逼`。  
+接着前往[安全中心](https://authx-service.s.zzu.edu.cn/security-center/eqIP-management)，将设备 ID 显示为 `鸣潮牛逼` 的设备设置为可信设备。   
 然后在你的应用中使用它。  
 
 ```python title="MFA 验证"
@@ -81,7 +81,7 @@ from zzupy.app import CASClient
 
 cas = CASClient("your_account", "your_password")
 # 设置 deviceId
-cas.set_device("your_deviceId") 
+cas.set_device("鸣潮牛逼") 
 if cas.mfa.is_required():
     cas.mfa.send_sms()
     cas.mfa.verify_sms(input("input sms code:"))
