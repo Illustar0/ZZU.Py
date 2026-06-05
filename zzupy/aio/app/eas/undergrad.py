@@ -3,7 +3,7 @@
 import json
 from typing import Final
 
-import httpx
+import httpx2
 from whenever import Date
 
 from zzupy.aio.app.interfaces import ICASClient
@@ -52,7 +52,7 @@ class UndergradEASClient:
         if not cas_client.logged_in:
             raise NotLoggedInError("CASClient 必须已经登录")
 
-        self._client = httpx.AsyncClient(
+        self._client = httpx2.AsyncClient(
             event_hooks=build_http_event_hooks(async_client=True)
         )
         self._cas_client = cas_client
@@ -103,7 +103,7 @@ class UndergradEASClient:
                 logger.error("服务器返回消息 {}", response_data["msg"])
                 raise OperationError(f"服务器返回消息 {response_data['msg']}")
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error(
                 "{}请求返回失败状态码: {}",
                 self.USER_INFO_URL,
@@ -121,7 +121,7 @@ class UndergradEASClient:
                 "服务器响应格式不正确",
                 context={"url": self.USER_INFO_URL},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("{} 请求失败: {}", self.USER_INFO_URL, exc)
             raise NetworkError.from_exception(
                 exc,
@@ -149,7 +149,7 @@ class UndergradEASClient:
 
             response_data = response.json()
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
             raise OperationError.from_http_status(
                 exc,
@@ -163,7 +163,7 @@ class UndergradEASClient:
                 "服务器响应格式不正确",
                 context={"url": url},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
             raise NetworkError.from_exception(
                 exc,
@@ -267,7 +267,7 @@ class UndergradEASClient:
 
             response_data = response.json()
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
             raise OperationError.from_http_status(
                 exc,
@@ -281,7 +281,7 @@ class UndergradEASClient:
                 "服务器响应格式不正确",
                 context={"url": url},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
             raise NetworkError.from_exception(
                 exc,
@@ -345,7 +345,7 @@ class UndergradEASClient:
 
             response_data = response.json()
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
             raise OperationError.from_http_status(
                 exc,
@@ -359,7 +359,7 @@ class UndergradEASClient:
                 "服务器响应格式不正确",
                 context={"url": url},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
             raise NetworkError.from_exception(
                 exc,
@@ -415,7 +415,7 @@ class UndergradEASClient:
 
             response_data = response.json()
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
             raise OperationError.from_http_status(
                 exc,
@@ -429,7 +429,7 @@ class UndergradEASClient:
                 "服务器响应格式不正确",
                 context={"url": url},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
             raise NetworkError.from_exception(
                 exc,

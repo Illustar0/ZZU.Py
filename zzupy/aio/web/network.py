@@ -9,7 +9,7 @@ import urllib.parse
 from typing import List
 from urllib.parse import parse_qs
 
-import httpx
+import httpx2
 import ifaddr
 from bs4 import BeautifulSoup
 from pydantic import ValidationError
@@ -70,7 +70,7 @@ async def discover_portal_info() -> PortalInfo:
         parsed = urllib.parse.urlparse(portal_url)
         return f"{parsed.scheme}://{parsed.netloc}"
 
-    async def _get_portal_server_url(client: httpx.AsyncClient, auth_url: str) -> str:
+    async def _get_portal_server_url(client: httpx2.AsyncClient, auth_url: str) -> str:
         """获取 Portal 服务器 URL"""
         DEFAULT_HTTP_PORT = 801
         DEFAULT_HTTPS_PORT = 802
@@ -100,7 +100,7 @@ async def discover_portal_info() -> PortalInfo:
         return {key: int(value) for key, value in matches}
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx2.AsyncClient(timeout=10.0) as client:
             response = await client.get("http://bilibili.com", follow_redirects=True)
 
             if str(response.url).startswith("https://"):
@@ -121,7 +121,7 @@ async def discover_portal_info() -> PortalInfo:
                 auth_url=auth_url, portal_server_url=portal_server_url, user_ip=user_ip
             )
 
-    except httpx.RequestError as exc:
+    except httpx2.RequestError as exc:
         raise NetworkError.from_exception(exc, f"网络请求失败: {exc}") from exc
     except ZZUError:
         raise
@@ -148,7 +148,7 @@ class EPortalClient:
                 如果你在路由器后使用本方法，则需要把 `bind_address` 填写为路由器分配的内网 IP 并启用 `force_bind`
         """
         self._base_url = base_url
-        self._client = httpx.AsyncClient()
+        self._client = httpx2.AsyncClient()
         if bind_address is None:
             self._bind_address = get_local_ip() or ""
         else:
@@ -160,13 +160,13 @@ class EPortalClient:
             ]
 
             if self._bind_address in local_ips:
-                transport = httpx.AsyncHTTPTransport(local_address=self._bind_address)
+                transport = httpx2.AsyncHTTPTransport(local_address=self._bind_address)
             else:
-                transport = httpx.AsyncHTTPTransport()
+                transport = httpx2.AsyncHTTPTransport()
 
         else:
-            transport = httpx.AsyncHTTPTransport(local_address=self._bind_address)
-        self._client = httpx.AsyncClient(
+            transport = httpx2.AsyncHTTPTransport(local_address=self._bind_address)
+        self._client = httpx2.AsyncClient(
             transport=transport,
         )
 
@@ -251,7 +251,7 @@ class EPortalClient:
             response.raise_for_status()
             res_json = json.loads(JsonPParser(response.text).data)
             return AuthResult.model_validate(res_json)
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -289,7 +289,7 @@ class SelfServiceSystem:
     """自助服务系统"""
 
     def __init__(self, base_url: str):
-        self._client = httpx.AsyncClient(base_url=base_url)
+        self._client = httpx2.AsyncClient(base_url=base_url)
         self._logged_in = False
 
     async def __aenter__(self):
@@ -349,7 +349,7 @@ class SelfServiceSystem:
                 raise LoginError("登录失败。这可能是因为账户和密码不正确。")
             self._logged_in = True
             return None
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -381,7 +381,7 @@ class SelfServiceSystem:
             response.raise_for_status()
             response_data = response.json()
             return [OnlineDevice(**device) for device in response_data]
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -414,13 +414,13 @@ class SelfServiceSystem:
                 params=params,
             )
             response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             raise OperationError.from_http_status(
                 exc,
                 "服务器返回错误状态",
                 context={"url": "/Self/dashboard/tooffline", "session_id": session_id},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",
@@ -438,7 +438,7 @@ class SelfServiceSystem:
             await self._client.get(
                 "/Self/login/logout",
             )
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             raise NetworkError.from_exception(
                 exc,
                 f"发生网络错误: {exc}",

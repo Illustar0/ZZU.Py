@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 from typing import Final
 
-import httpx
+import httpx2
 import jwt
 from pydantic import ValidationError
 
@@ -45,7 +45,7 @@ class CASClient(ICASClient):
             account: 账号
             password: 密码
         """
-        self._client = httpx.Client(event_hooks=build_http_event_hooks())
+        self._client = httpx2.Client(event_hooks=build_http_event_hooks())
         self._account = account
         self._password = password
         self._public_key: RSAPublicKey | None = None
@@ -161,7 +161,7 @@ class CASClient(ICASClient):
             response.raise_for_status()
             public_key_pem = response.content
             return serialization.load_pem_public_key(public_key_pem)
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("获取公钥失败，网络请求异常: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -253,7 +253,7 @@ class CASClient(ICASClient):
 
             logger.info("统一认证登录成功")
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("登录请求返回失败状态码: {}", exc.response.status_code)
             raise LoginError.from_http_status(
                 exc,
@@ -267,7 +267,7 @@ class CASClient(ICASClient):
                 "服务器响应格式不正确",
                 context={"url": self.LOGIN_URL},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("登录网络请求失败: {}", exc)
             raise NetworkError.from_exception(
                 exc,
@@ -302,7 +302,7 @@ class CASClient(ICASClient):
 
             response_data = response.json()
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
             raise OperationError.from_http_status(
                 exc,
@@ -316,7 +316,7 @@ class CASClient(ICASClient):
                 "服务器响应格式不正确",
                 context={"url": url},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
             raise NetworkError.from_exception(
                 exc,
@@ -351,7 +351,7 @@ class CASClient(ICASClient):
 
             response_data = response.json()
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             logger.error("{}请求返回失败状态码: {}", url, exc.response.status_code)
             raise OperationError.from_http_status(
                 exc,
@@ -365,7 +365,7 @@ class CASClient(ICASClient):
                 "服务器响应格式不正确",
                 context={"url": url},
             ) from exc
-        except httpx.RequestError as exc:
+        except httpx2.RequestError as exc:
             logger.error("{} 请求失败: {}", url, exc)
             raise NetworkError.from_exception(
                 exc,
