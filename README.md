@@ -43,6 +43,11 @@ pip install -U zzupy
 from zzupy.app import CASClient, UndergradEASClient
 
 cas = CASClient("your_account", "your_password")
+# cas.set_token("your_userToken", "your_refreshToken")
+# cas.set_device("your_deviceId")
+if cas.mfa.is_required():
+    cas.mfa.send_sms()
+    cas.mfa.verify_sms(input("input sms code:"))
 cas.login()
 
 with UndergradEASClient(cas) as eas:
@@ -59,9 +64,9 @@ with UndergradEASClient(cas) as eas:
 from zzupy.web import EPortalClient, discover_portal_info
 
 portal = discover_portal_info()
-with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as client:
+with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip, force_bind=True) as client:
     result = client.auth("your_account", "your_password")
-    print(result.success, result.message)
+    print(result.message)
 ```
 
 ## 模块概览
