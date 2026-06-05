@@ -27,7 +27,7 @@ develop = [
 ]
 
 docs = [
-    "mkdocstrings[python]>=0.30.1,<1",
+    "mkdocstrings[python]>=1.0.4",
     "zensical>=0.0.44",
 ]
 

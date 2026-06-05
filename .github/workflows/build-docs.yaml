@@ -33,7 +33,7 @@ jobs:
       - name: Build static files
         id: build
         run: |
-          uv sync --extra docs
+          uv sync --locked --extra docs
           uv run python scripts/generate_api_reference.py
           uv run zensical build
 
