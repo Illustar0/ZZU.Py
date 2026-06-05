@@ -31,8 +31,8 @@ jobs:
       - name: Calculate next version
         id: version
         run: |
-          tag="v7.2.0"
-          version="7.2.0"
+          tag="$(npx --yes git-cliff --config cliff.toml --bumped-version)"
+          version="${tag#v}"
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
