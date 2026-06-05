@@ -12,7 +12,13 @@ from pydantic import ValidationError
 
 from zzupy.aio.app.interfaces import ICASClient
 from zzupy.crypto import RSAPublicKey, padding, serialization
-from zzupy.exception import LoginError, ParsingError, NetworkError, OperationError
+from zzupy.exception import (
+    LoginError,
+    ParsingError,
+    NetworkError,
+    OperationError,
+    MFAError,
+)
 from zzupy.logging import build_http_event_hooks, log_http_response_body, logger
 from zzupy.model.auth import PersonalInfo, PersonalInfoCardModel, PersonalInfoModel
 from zzupy.utils import require_auth
@@ -31,6 +37,11 @@ class CASClient(ICASClient):
         "https://authx-service.s.zzu.edu.cn/personal/api/v1/personal/me/user"
     )
     PERSONAL_INFO_CARD_URL: Final = "https://info.s.zzu.edu.cn/portal-api/v1/thrid-adapter/get-person-info-card-list"
+    MFA_DETECT_URL: Final = "https://cas.s.zzu.edu.cn/token/mfa/detect"
+    MFA_SECURE_PHONE_INIT_URL: Final = (
+        "https://cas.s.zzu.edu.cn/token/mfa/initByType/securephone"
+    )
+    MFA_ATTEST_SERVER_URL: Final = "https://cas.s.zzu.edu.cn/attest/api/guard"
 
     JWT_ALGORITHMS: Final = ["RS512"]
 
@@ -55,6 +66,8 @@ class CASClient(ICASClient):
         self._refresh_token: str | None = None
         self._logged_in: bool = False
         self._refresh_task: asyncio.Task | None = None
+        self._device_id = "ZZU.Py"
+        self.mfa = self.MFAClient(self)
 
     async def __aenter__(self) -> "CASClient":
         return self
@@ -71,6 +84,15 @@ class CASClient(ICASClient):
         """
         self._user_token = user_token
         self._refresh_token = refresh_token
+
+    def set_device(self, device_id: str) -> None:
+        """设置认证请求使用的设备标识。
+
+        Args:
+            device_id: 登录和 MFA 检测请求中的 `deviceId`。
+        """
+        self._device_id = device_id
+        self.mfa.reset()
 
     @property
     def user_token(self) -> str | None:
@@ -184,6 +206,365 @@ class CASClient(ICASClient):
         encoded_bytes = base64.b64encode(encrypted_bytes)
         return f"__RSA__{encoded_bytes.decode('utf-8')}"
 
+    class MFAClient:
+        """统一认证 MFA 异步辅助客户端。
+
+        本客户端由 [`CASClient`][zzupy.aio.app.auth.CASClient] 自动创建，通常通过
+        [`CASClient.mfa`][zzupy.aio.app.auth.CASClient.mfa] 访问。它负责检测 MFA
+        状态、发送手机号验证码并校验验证码。
+        """
+
+        def __init__(self, cas: "CASClient") -> None:
+            """初始化 MFA 异步辅助客户端。
+
+            Args:
+                cas: 所属的统一认证客户端。
+            """
+            self._cas = cas
+            self._client = self._cas._client
+            self.state = ""
+            self.gid = ""
+            self.attest_server_url = ""
+            self.required = False
+            self.secure_phone_available = False
+            self.verified = False
+
+        def reset(self) -> None:
+            """清除当前 MFA 流程状态。"""
+            self.state = ""
+            self.gid = ""
+            self.attest_server_url = ""
+            self.required = False
+            self.secure_phone_available = False
+            self.verified = False
+
+        def _app_headers(self) -> dict[str, str]:
+            """构造 MFA 请求头。"""
+            return {"User-Agent": f"{self._cas.APP_VERSION}()"}
+
+        async def _ensure_public_key(self) -> RSAPublicKey:
+            """确保统一认证客户端已获取 RSA 公钥。"""
+            if self._cas._public_key is None:
+                self._cas._public_key = await self._cas._get_public_key()
+            return self._cas._public_key
+
+        def _attest_url(self, path: str) -> str:
+            """拼接 MFA 校验服务 URL。"""
+            base_url = self.attest_server_url or self._cas.MFA_ATTEST_SERVER_URL
+            return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
+
+        async def is_required(self) -> bool:
+            """检测当前环境是否需要 MFA 验证。
+
+            Returns:
+                是否需要 MFA 验证。
+
+            Raises:
+                OperationError: 如果检测失败。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
+            public_key = await self._ensure_public_key()
+            encrypted_account = self._cas._encrypt_and_encode(
+                self._cas._account, public_key
+            )
+            encrypted_password = self._cas._encrypt_and_encode(
+                self._cas._password, public_key
+            )
+
+            params = {
+                "username": encrypted_account,
+                "password": encrypted_password,
+                "deviceId": self._cas._device_id,
+            }
+
+            try:
+                logger.debug("正在向 {} 发送 MFA 检测请求...", self._cas.MFA_DETECT_URL)
+                response = await self._client.post(
+                    self._cas.MFA_DETECT_URL,
+                    params=params,
+                    headers=self._app_headers(),
+                )
+                response.raise_for_status()
+
+                log_http_response_body(
+                    self._cas.MFA_DETECT_URL,
+                    response.text,
+                    content_type=response.headers.get("content-type"),
+                    level="DEBUG",
+                )
+
+                data: dict = response.json()
+                if data.get("code") != 0:
+                    error_message = data.get("message", "未知错误")
+                    logger.error("MFA 检测请求失败: {}", error_message)
+                    raise LoginError(f"MFA 检测失败: {error_message}")
+
+                mfa_data = data["data"]
+                self.state = mfa_data["state"]
+                self.gid = ""
+                self.attest_server_url = ""
+                self.required = bool(mfa_data["need"])
+                self.secure_phone_available = bool(
+                    mfa_data.get("mfaTypeSecurePhone", False)
+                )
+                self.verified = False
+                logger.info("MFA 检测成功")
+                return self.required
+
+            except httpx2.HTTPStatusError as exc:
+                logger.error("MFA 检测请求返回失败状态码: {}", exc.response.status_code)
+                raise OperationError.from_http_status(
+                    exc,
+                    "服务器返回错误状态",
+                    context={"url": self._cas.MFA_DETECT_URL},
+                ) from exc
+            except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                logger.error("从 /mfa/detect 响应中提取 MFA 状态失败: {}", exc)
+                raise ParsingError.from_exception(
+                    exc,
+                    "服务器响应格式不正确",
+                    context={"url": self._cas.MFA_DETECT_URL},
+                ) from exc
+            except httpx2.RequestError as exc:
+                logger.error("MFA 检测网络请求失败: {}", exc)
+                raise NetworkError.from_exception(
+                    exc,
+                    "网络连接异常",
+                    context={"url": self._cas.MFA_DETECT_URL},
+                ) from exc
+
+        async def _init_secure_phone(self) -> None:
+            """初始化手机号 MFA。
+
+            Raises:
+                LoginError: 如果当前登录不需要 MFA 验证。
+                OperationError: 如果当前账号不支持手机号 MFA，或初始化失败。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
+            if not self.state:
+                if not await self.is_required():
+                    raise LoginError("当前登录不需要 MFA 验证。")
+            elif not self.required:
+                raise LoginError("当前登录不需要 MFA 验证。")
+
+            if not self.secure_phone_available:
+                raise OperationError("当前账号不支持手机号 MFA。")
+
+            params = {"state": self.state}
+            try:
+                logger.debug(
+                    "正在向 {} 发送手机号 MFA 初始化请求...",
+                    self._cas.MFA_SECURE_PHONE_INIT_URL,
+                )
+                response = await self._client.get(
+                    self._cas.MFA_SECURE_PHONE_INIT_URL,
+                    params=params,
+                    headers=self._app_headers(),
+                )
+                response.raise_for_status()
+                log_http_response_body(
+                    self._cas.MFA_SECURE_PHONE_INIT_URL,
+                    response.text,
+                    content_type=response.headers.get("content-type"),
+                    level="DEBUG",
+                )
+
+                data: dict = response.json()
+                if data.get("code") != 0:
+                    error_message = data.get("message", "未知错误")
+                    logger.error("手机号 MFA 初始化失败: {}", error_message)
+                    raise OperationError(f"手机号 MFA 初始化失败: {error_message}")
+
+                mfa_data = data["data"]
+                self.gid = mfa_data["gid"]
+                self.attest_server_url = mfa_data.get("attestServerUrl") or ""
+                logger.info("手机号 MFA 初始化成功")
+
+            except httpx2.HTTPStatusError as exc:
+                logger.error(
+                    "手机号 MFA 初始化返回失败状态码: {}", exc.response.status_code
+                )
+                raise OperationError.from_http_status(
+                    exc,
+                    "服务器返回错误状态",
+                    context={"url": self._cas.MFA_SECURE_PHONE_INIT_URL},
+                ) from exc
+            except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                logger.error(
+                    "从 /mfa/initByType/securephone 响应中提取数据失败: {}", exc
+                )
+                raise ParsingError.from_exception(
+                    exc,
+                    "服务器响应格式不正确",
+                    context={"url": self._cas.MFA_SECURE_PHONE_INIT_URL},
+                ) from exc
+            except httpx2.RequestError as exc:
+                logger.error("手机号 MFA 初始化网络请求失败: {}", exc)
+                raise NetworkError.from_exception(
+                    exc,
+                    "网络连接异常",
+                    context={"url": self._cas.MFA_SECURE_PHONE_INIT_URL},
+                ) from exc
+
+        async def request_sms_code(self) -> None:
+            """发送 MFA 短信验证码。
+
+            如果尚未初始化手机号 MFA，会自动调用内部初始化流程。
+
+            Raises:
+                LoginError: 如果当前登录不需要 MFA 验证。
+                OperationError: 如果短信发送失败。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
+            if not self.gid:
+                await self._init_secure_phone()
+
+            url = self._attest_url("api/guard/securephone/send")
+            try:
+                logger.debug("正在向 {} 发送 MFA 短信验证码请求...", url)
+                response = await self._client.post(
+                    url,
+                    json={"gid": self.gid},
+                    headers=self._app_headers(),
+                )
+                response.raise_for_status()
+                log_http_response_body(
+                    url,
+                    response.text,
+                    content_type=response.headers.get("content-type"),
+                    level="DEBUG",
+                )
+
+                data: dict = response.json()
+                if data.get("code") != 0:
+                    error_message = data.get("message", "未知错误")
+                    logger.error("MFA 短信验证码发送失败: {}", error_message)
+                    raise OperationError(f"MFA 短信验证码发送失败: {error_message}")
+
+                data["data"]["result"]
+                logger.info("MFA 短信验证码发送成功")
+                return None
+
+            except httpx2.HTTPStatusError as exc:
+                logger.error(
+                    "MFA 短信验证码发送返回失败状态码: {}", exc.response.status_code
+                )
+                raise OperationError.from_http_status(
+                    exc,
+                    "服务器返回错误状态",
+                    context={"url": url},
+                ) from exc
+            except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                logger.error(
+                    "从 /api/guard/securephone/send 响应中提取数据失败: {}", exc
+                )
+                raise ParsingError.from_exception(
+                    exc,
+                    "服务器响应格式不正确",
+                    context={"url": url},
+                ) from exc
+            except httpx2.RequestError as exc:
+                logger.error("MFA 短信验证码发送网络请求失败: {}", exc)
+                raise NetworkError.from_exception(
+                    exc,
+                    "网络连接异常",
+                    context={"url": url},
+                ) from exc
+
+        async def send_sms(self) -> None:
+            """[`request_sms_code()`][zzupy.aio.app.auth.CASClient.MFAClient.request_sms_code] 的别名。"""
+            return await self.request_sms_code()
+
+        async def verify_sms_code(self, code: str) -> str:
+            """校验 MFA 短信验证码。
+
+            调用前必须先发送 MFA 短信验证码。
+            校验成功后，[`CASClient.login()`][zzupy.aio.app.auth.CASClient.login]
+            会使用当前 MFA state 完成登录。
+
+            Args:
+                code: 短信验证码。
+
+            Returns:
+                可用于登录的 MFA state。
+
+            Raises:
+                MFAError: 如果尚未发送 MFA 短信验证码。
+                LoginError: 如果验证码校验失败。
+                OperationError: 如果服务器返回失败状态。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
+            if not self.gid:
+                raise MFAError("MFA 状态错误，请先发送短信验证码。")
+
+            url = self._attest_url("api/guard/securephone/valid")
+            try:
+                logger.debug("正在向 {} 发送 MFA 短信验证码校验请求...", url)
+                response = await self._client.post(
+                    url,
+                    json={"gid": self.gid, "code": code},
+                    headers=self._app_headers(),
+                )
+                response.raise_for_status()
+                log_http_response_body(
+                    url,
+                    response.text,
+                    content_type=response.headers.get("content-type"),
+                    level="DEBUG",
+                )
+
+                data: dict = response.json()
+                if data.get("code") != 0:
+                    error_message = data.get("message", "未知错误")
+                    logger.error("MFA 短信验证码校验失败: {}", error_message)
+                    raise LoginError(f"MFA 短信验证码校验失败: {error_message}")
+
+                mfa_data = data["data"]
+                if mfa_data.get("status") != 2:
+                    logger.error(
+                        "MFA 短信验证码校验失败，状态码: {}", mfa_data.get("status")
+                    )
+                    raise LoginError("MFA 短信验证码校验失败。")
+
+                mfa_data["result"]
+                self.verified = True
+                logger.info("MFA 短信验证码校验成功")
+                return self.state
+
+            except httpx2.HTTPStatusError as exc:
+                logger.error(
+                    "MFA 短信验证码校验返回失败状态码: {}", exc.response.status_code
+                )
+                raise OperationError.from_http_status(
+                    exc,
+                    "服务器返回错误状态",
+                    context={"url": url},
+                ) from exc
+            except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                logger.error(
+                    "从 /api/guard/securephone/valid 响应中提取数据失败: {}", exc
+                )
+                raise ParsingError.from_exception(
+                    exc,
+                    "服务器响应格式不正确",
+                    context={"url": url},
+                ) from exc
+            except httpx2.RequestError as exc:
+                logger.error("MFA 短信验证码校验网络请求失败: {}", exc)
+                raise NetworkError.from_exception(
+                    exc,
+                    "网络连接异常",
+                    context={"url": url},
+                ) from exc
+
+        async def verify_sms(self, code: str) -> str:
+            """[`verify_sms_code()`][zzupy.aio.app.auth.CASClient.MFAClient.verify_sms_code] 的别名。"""
+            return await self.verify_sms_code(code)
+
     async def login(self, force_login: bool = False) -> None:
         """登录统一认证。
 
@@ -201,6 +582,14 @@ class CASClient(ICASClient):
         """
         if self._public_key is None:
             self._public_key = await self._get_public_key()
+
+        if self.mfa.state:
+            mfa_state_invalid = self.mfa.required and not self.mfa.verified
+        else:
+            mfa_state_invalid = not await self.mfa.is_required()
+        if mfa_state_invalid:
+            raise MFAError("MFA 状态错误，当前会话可能需要 MFA 验证")
+
         if not force_login:
             if self._user_token is None or self._refresh_token is None:
                 logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
@@ -222,9 +611,9 @@ class CASClient(ICASClient):
             "appId": self.APP_ID,
             "osType": self.OS_TYPE,
             "geo": "",
-            "deviceId": "",
+            "deviceId": self._device_id,
             "clientId": "",
-            "mfaState": "",
+            "mfaState": self.mfa.state,
         }
 
         try:
@@ -411,6 +800,7 @@ class CASClient(ICASClient):
         self._client.headers.clear()
         self._user_token = None
         self._refresh_token = None
+        self.mfa.reset()
         if self._refresh_task is not None:
             self._refresh_task.cancel()
             self._refresh_task = None
