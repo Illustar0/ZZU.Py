@@ -143,6 +143,12 @@ class DataNotFoundError(OperationError, LookupError):
     default_message = "请求的数据不存在"
 
 
+class MFAError(LoginError):
+    """MFA 状态错误，当前会话可能需要 MFA 验证"""
+
+    default_message = "MFA 状态错误，当前会话可能需要 MFA 验证"
+
+
 __all__ = [
     "AuthenticationError",
     "ClientStateError",
@@ -154,4 +160,5 @@ __all__ = [
     "OperationError",
     "ParsingError",
     "ZZUError",
+    "MFAError",
 ]
