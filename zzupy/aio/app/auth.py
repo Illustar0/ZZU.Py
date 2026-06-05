@@ -207,7 +207,19 @@ class CASClient(ICASClient):
         return f"__RSA__{encoded_bytes.decode('utf-8')}"
 
     class MFAClient:
+        """统一认证 MFA 异步辅助客户端。
+
+        本客户端由 [`CASClient`][zzupy.aio.app.auth.CASClient] 自动创建，通常通过
+        [`CASClient.mfa`][zzupy.aio.app.auth.CASClient.mfa] 访问。它负责检测 MFA
+        状态、发送手机号验证码并校验验证码。
+        """
+
         def __init__(self, cas: "CASClient") -> None:
+            """初始化 MFA 异步辅助客户端。
+
+            Args:
+                cas: 所属的统一认证客户端。
+            """
             self._cas = cas
             self._client = self._cas._client
             self.state = ""
@@ -229,19 +241,31 @@ class CASClient(ICASClient):
             self.verified = False
 
         def _app_headers(self) -> dict[str, str]:
+            """构造 MFA 请求头。"""
             return {"User-Agent": f"{self._cas.APP_VERSION}()"}
 
         async def _ensure_public_key(self) -> RSAPublicKey:
+            """确保统一认证客户端已获取 RSA 公钥。"""
             if self._cas._public_key is None:
                 self._cas._public_key = await self._cas._get_public_key()
             return self._cas._public_key
 
         def _attest_url(self, path: str) -> str:
+            """拼接 MFA 校验服务 URL。"""
             base_url = self.attest_server_url or self._cas.MFA_ATTEST_SERVER_URL
             return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
 
         async def is_required(self) -> bool:
-            """检测当前环境是否需要 MFA 验证"""
+            """检测当前环境是否需要 MFA 验证。
+
+            Returns:
+                是否需要 MFA 验证。
+
+            Raises:
+                OperationError: 如果检测失败。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
             public_key = await self._ensure_public_key()
             encrypted_account = self._cas._encrypt_and_encode(
                 self._cas._account, public_key
@@ -314,7 +338,17 @@ class CASClient(ICASClient):
                 ) from exc
 
         async def _init_secure_phone(self) -> str:
-            """初始化手机号 MFA，返回脱敏手机号。"""
+            """初始化手机号 MFA。
+
+            Returns:
+                脱敏手机号。
+
+            Raises:
+                LoginError: 如果当前登录不需要 MFA 验证。
+                OperationError: 如果当前账号不支持手机号 MFA，或初始化失败。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
             if not self.state:
                 if not await self.is_required():
                     raise LoginError("当前登录不需要 MFA 验证。")
@@ -383,7 +417,19 @@ class CASClient(ICASClient):
                 ) from exc
 
         async def request_sms_code(self) -> str:
-            """发送 MFA 短信验证码，返回脱敏手机号。"""
+            """发送 MFA 短信验证码。
+
+            如果尚未初始化手机号 MFA，会自动调用内部初始化流程。
+
+            Returns:
+                接收验证码的脱敏手机号。
+
+            Raises:
+                LoginError: 如果当前登录不需要 MFA 验证。
+                OperationError: 如果短信发送失败。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
             if not self.gid:
                 await self._init_secure_phone()
 
@@ -444,7 +490,24 @@ class CASClient(ICASClient):
             return await self.request_sms_code()
 
         async def verify_sms_code(self, code: str) -> str:
-            """校验 MFA 短信验证码，返回可用于登录的 MFA state。"""
+            """校验 MFA 短信验证码。
+
+            如果尚未初始化手机号 MFA，会自动调用内部初始化流程。
+            校验成功后，[`CASClient.login()`][zzupy.aio.app.auth.CASClient.login]
+            会使用当前 MFA state 完成登录。
+
+            Args:
+                code: 短信验证码。
+
+            Returns:
+                可用于登录的 MFA state。
+
+            Raises:
+                LoginError: 如果验证码校验失败，或当前登录不需要 MFA 验证。
+                OperationError: 如果服务器返回失败状态。
+                ParsingError: 如果服务器响应无法解析。
+                NetworkError: 如果出现网络错误。
+            """
             if not self.gid:
                 await self._init_secure_phone()
 
