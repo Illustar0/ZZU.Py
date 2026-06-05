@@ -30,6 +30,61 @@
 from zzupy.app import CASClient
 
 cas = CASClient("your_account", "your_password")
+# cas.set_token("your_userToken", "your_refreshToken")
+# cas.set_device("your_deviceId")
+if cas.mfa.is_required():
+    cas.mfa.send_sms()
+    cas.mfa.verify_sms(input("input sms code:"))
+cas.login()
+
+print(cas.logged_in)
+print(cas.user_token)
+print(cas.refresh_token)
+```
+
+### MFA 验证
+
+在 v7.1.0 中，`ZZU.Py` 引入了对 MFA 多因素验证的支持。 **你必须把你的应用升级至 `ZZU.Py >= 7.1.0`。**   
+截止 2026 年 6 月 5 日，是否会被要求进行 MFA 验证主要由 `deviceId` 决定。在 `ZZU.Py >= 7.1.0` 中，`ZZU.Py` 内置了字符串 `ZZU.Py` 作为 `deviceId`。
+
+想要适配 MFA 验证，你有两种选择：
+#### 1. 使用内置的 `deviceId` 完成一次 MFA 验证并将其添加为可信设备
+
+在你能够实时操作的设备上运行，并确保你能够访问你的 MFA 手机。  
+```python title="MFA 验证"
+from zzupy.app import CASClient
+
+cas = CASClient("your_account", "your_password")
+# 或者你也可以使用你喜欢的字符串作为 deviceId
+# cas.set_device("原神牛逼") 
+if cas.mfa.is_required():
+    cas.mfa.send_sms()
+    cas.mfa.verify_sms(input("input sms code:"))
+cas.login()
+
+print(cas.logged_in)
+print(cas.user_token)
+print(cas.refresh_token)
+```
+
+接着前往[安全中心](https://authx-service.s.zzu.edu.cn/security-center/eqIP-management)，将设备 ID 显示为 `ZZU.Py` 的设备设置为可信设备。   
+理论上后续 `ZZU.Py` 就不会再被要求进行 MFA 验证。
+
+#### 2. 抓包并使用常用设备的 deviceId 并将其添加为可信设备
+
+对你的常用设备上的“豫见郑大” APP 进行抓包，获取其 `deviceId`。  
+接着前往[安全中心](https://authx-service.s.zzu.edu.cn/security-center/eqIP-management)，将设备 ID 显示为 `your_deviceId` 的设备设置为可信设备。   
+然后在你的应用中使用它。  
+
+```python title="MFA 验证"
+from zzupy.app import CASClient
+
+cas = CASClient("your_account", "your_password")
+# 设置 deviceId
+cas.set_device("your_deviceId") 
+if cas.mfa.is_required():
+    cas.mfa.send_sms()
+    cas.mfa.verify_sms(input("input sms code:"))
 cas.login()
 
 print(cas.logged_in)
@@ -43,13 +98,35 @@ print(cas.refresh_token)
 from zzupy.app import CASClient
 
 cas = CASClient("your_account", "your_password")
-cas.set_token("your_user_token", "your_refresh_token")
+cas.set_token("your_userToken", "your_refreshToken")
+# cas.set_device("your_deviceId")
+if cas.mfa.is_required():
+    cas.mfa.send_sms()
+    cas.mfa.verify_sms(input("input sms code:"))
 cas.login()
 
 print(cas.logged_in)
 ```
 
 如果预置的 Token 仍然有效，`login()` 会直接复用；如果已经失效或即将过期，则会退回账密登录并更新 Token。
+
+### 复用已有 deviceId
+
+```python title="使用 set_device()"
+from zzupy.app import CASClient
+
+cas = CASClient("your_account", "your_password")
+cas.set_token("your_userToken", "your_refreshToken")
+cas.set_device("your_deviceId")
+if cas.mfa.is_required():
+    cas.mfa.send_sms()
+    cas.mfa.verify_sms(input("input sms code:"))
+cas.login()
+
+print(cas.logged_in)
+```
+
+对常用设备上的豫见郑大抓包来获取 `deviceId`
 
 ## 读取个人信息
 
