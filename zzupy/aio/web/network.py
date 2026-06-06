@@ -20,6 +20,7 @@ from zzupy.exception import (
     ParsingError,
     ZZUError,
 )
+from zzupy.logging import logger
 from zzupy.model.network import AuthResult, OnlineDevice, PortalInfo
 from zzupy.utils import (
     extract_first_html_attr,
@@ -66,18 +67,21 @@ async def discover_portal_info() -> PortalInfo:
     def _extract_auth_url(portal_url: str) -> str:
         """提取网页认证 URL"""
         parsed = urllib.parse.urlparse(portal_url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ParsingError("无法从Portal URL获取认证服务器地址")
         return f"{parsed.scheme}://{parsed.netloc}"
 
     async def _get_portal_server_url(client: httpx2.AsyncClient, auth_url: str) -> str:
         """获取 Portal 服务器 URL"""
         DEFAULT_HTTP_PORT = 801
         DEFAULT_HTTPS_PORT = 802
+        hostname = urllib.parse.urlparse(auth_url).hostname
+        if hostname is None:
+            raise ParsingError("无法从认证 URL 获取 Portal 主机名")
 
         try:
             response = await client.get(f"{auth_url}/a41.js")
             js_params = _parse_js_config(response.text)
-
-            hostname = urllib.parse.urlparse(auth_url).hostname
 
             if js_params.get("enableHttps") == 0:
                 port = js_params.get("epHTTPPort", DEFAULT_HTTP_PORT)
@@ -86,9 +90,8 @@ async def discover_portal_info() -> PortalInfo:
                 port = js_params.get("enHTTPSPort", DEFAULT_HTTPS_PORT)
                 return f"https://{hostname}:{port}"
 
-        except Exception:
-            # 降级到默认配置
-            hostname = urllib.parse.urlparse(auth_url).hostname
+        except (httpx2.RequestError, ValueError) as exc:
+            logger.debug("获取 Portal 服务器配置失败，降级到默认配置: {}", exc)
             return f"http://{hostname}:{DEFAULT_HTTP_PORT}"
 
     def _parse_js_config(js_content: str) -> dict[str, int]:
