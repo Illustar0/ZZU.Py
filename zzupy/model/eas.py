@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, List
+from typing import Any, List, ClassVar
 
 from icalendar import Calendar
 from icalendar.cal import Event
@@ -434,8 +434,8 @@ class TeachingWeek(BaseModel):
 
     model_config = ConfigDict(frozen=False)
 
-    DAYS: int = 7
-    UNITS: int = 10
+    DAYS: ClassVar[int] = 7
+    UNITS: ClassVar[int] = 10
 
     lessons: dict[tuple[int, int], Lesson] = Field(default_factory=dict)
     """内部存储：仅存储非空课程，key 为 (weekday, unit)，value 为 Lesson"""
