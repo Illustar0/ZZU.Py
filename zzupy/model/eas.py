@@ -7,7 +7,7 @@ from icalendar import Calendar
 from icalendar.cal import Event
 from pydantic import BaseModel, model_validator, ConfigDict, RootModel, Field
 from pydantic.alias_generators import to_camel
-from whenever import ZonedDateTime, Date, PlainDateTime, Instant
+from whenever import ZonedDateTime, Date, Instant, Time
 
 
 class Campus(BaseModel):
@@ -341,9 +341,7 @@ class Schedule(BaseModel):
             if time_val:
                 time_str = str(time_val).strip().zfill(4)
                 try:
-                    schedule_time = PlainDateTime.parse_strptime(
-                        time_str, format="%H%M"
-                    ).time()
+                    schedule_time = Time.parse(time_str, format="hhmm")
                     data[key] = schedule_date.at(schedule_time).assume_tz(
                         "Asia/Shanghai"
                     )
