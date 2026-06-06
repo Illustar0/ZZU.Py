@@ -325,9 +325,9 @@ class Schedule(BaseModel):
             return data
 
         try:
-            schedule_date = Date.parse_iso(date_str)
-        except Exception:
-            return data
+            schedule_date = Date.parse_iso(str(date_str))
+        except ValueError as exc:
+            raise ValueError(f"无法解析课程日期 date={date_str!r}") from exc
 
         time_keys = [
             "startTime",
@@ -339,14 +339,19 @@ class Schedule(BaseModel):
         for key in time_keys:
             time_val = data.get(key)
             if time_val:
+                if isinstance(time_val, ZonedDateTime):
+                    continue
+
                 time_str = str(time_val).strip().zfill(4)
                 try:
                     schedule_time = Time.parse(time_str, format="hhmm")
                     data[key] = schedule_date.at(schedule_time).assume_tz(
                         "Asia/Shanghai"
                     )
-                except Exception:
-                    pass
+                except ValueError as exc:
+                    raise ValueError(
+                        f"无法解析课程时间字段 {key}={time_val!r}"
+                    ) from exc
 
         return data
 
