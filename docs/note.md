@@ -1,5 +1,5 @@
 # Note
-<font color=gray size=3> 一些逆向过程的笔记</font>
+<span  style="color: gray; font-size: small; "> 一些逆向过程的笔记</span>
 
 ### 充值电费
 ZZU 的电费充值系统对充值的请求体进行了加密，这本没有问题，但他居然选择的是国密算法，SM2 和 SM4。可能是国产化指标吧，唉😮‍💨。  
