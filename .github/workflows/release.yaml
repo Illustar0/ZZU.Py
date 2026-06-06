@@ -47,6 +47,7 @@ jobs:
           uv build
 
       - name: Publish | Upload package to PyPI
+        continue-on-error: true
         run: |
           uv publish --token ${{ secrets.PYPI_TOKEN }}
 
