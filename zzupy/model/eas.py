@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, List
+from typing import Any, List, ClassVar
 
 from icalendar import Calendar
 from icalendar.cal import Event
 from pydantic import BaseModel, model_validator, ConfigDict, RootModel, Field
 from pydantic.alias_generators import to_camel
-from whenever import ZonedDateTime, Date, PlainDateTime, Instant
+from whenever import ZonedDateTime, Date, Instant, Time
 
 
 class Campus(BaseModel):
@@ -60,7 +60,7 @@ class PeriodInfo(BaseModel):
     require_theory: int | None
     """要求完成的理论学时数"""
     practice: None
-    practice_unit: str
+    practice_unit: str | None
     require_practice: None
     focus_practice: None
     focus_practice_unit: None
@@ -325,9 +325,9 @@ class Schedule(BaseModel):
             return data
 
         try:
-            schedule_date = Date.parse_iso(date_str)
-        except Exception:
-            return data
+            schedule_date = Date.parse_iso(str(date_str))
+        except ValueError as exc:
+            raise ValueError(f"无法解析课程日期 date={date_str!r}") from exc
 
         time_keys = [
             "startTime",
@@ -339,16 +339,19 @@ class Schedule(BaseModel):
         for key in time_keys:
             time_val = data.get(key)
             if time_val:
+                if isinstance(time_val, ZonedDateTime):
+                    continue
+
                 time_str = str(time_val).strip().zfill(4)
                 try:
-                    schedule_time = PlainDateTime.parse_strptime(
-                        time_str, format="%H%M"
-                    ).time()
+                    schedule_time = Time.parse(time_str, format="hhmm")
                     data[key] = schedule_date.at(schedule_time).assume_tz(
                         "Asia/Shanghai"
                     )
-                except Exception:
-                    pass
+                except ValueError as exc:
+                    raise ValueError(
+                        f"无法解析课程时间字段 {key}={time_val!r}"
+                    ) from exc
 
         return data
 
@@ -431,8 +434,8 @@ class TeachingWeek(BaseModel):
 
     model_config = ConfigDict(frozen=False)
 
-    DAYS: int = 7
-    UNITS: int = 10
+    DAYS: ClassVar[int] = 7
+    UNITS: ClassVar[int] = 10
 
     lessons: dict[tuple[int, int], Lesson] = Field(default_factory=dict)
     """内部存储：仅存储非空课程，key 为 (weekday, unit)，value 为 Lesson"""
@@ -553,17 +556,16 @@ class TeachingWeek(BaseModel):
 
             # 起始时间
             start_time = (
-                schedule.real_start_time.py_datetime()
-                or schedule.start_time.py_datetime()
+                schedule.real_start_time.to_stdlib() or schedule.start_time.to_stdlib()
             )
             end_time = (
-                schedule.real_end_time.py_datetime() or schedule.end_time.py_datetime()
+                schedule.real_end_time.to_stdlib() or schedule.end_time.to_stdlib()
             )
             event.add("dtstart", start_time)
             event.add("dtend", end_time)
 
             # 事件生成时间
-            event.add("dtstamp", Instant.now().py_datetime())
+            event.add("dtstamp", Instant.now().to_stdlib())
 
             # 事件 UID
             event.add("uid", f"{uuid.uuid4()}@schedule")
@@ -647,18 +649,17 @@ class TeachingWeeks(RootModel):
 
                 # 起始时间
                 start_time = (
-                    schedule.real_start_time.py_datetime()
-                    or schedule.start_time.py_datetime()
+                    schedule.real_start_time.to_stdlib()
+                    or schedule.start_time.to_stdlib()
                 )
                 end_time = (
-                    schedule.real_end_time.py_datetime()
-                    or schedule.end_time.py_datetime()
+                    schedule.real_end_time.to_stdlib() or schedule.end_time.to_stdlib()
                 )
                 event.add("dtstart", start_time)
                 event.add("dtend", end_time)
 
                 # 事件生成时间
-                event.add("dtstamp", Instant.now().py_datetime())
+                event.add("dtstamp", Instant.now().to_stdlib())
 
                 # 事件 UID
                 event.add("uid", f"{uuid.uuid4()}@schedule")

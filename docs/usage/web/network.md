@@ -124,7 +124,7 @@ with SelfServiceSystem("http://10.2.7.16:8080") as system:
     devices = system.get_online_devices()
 
     for device in devices:
-        print(device.ip, device.mac, device.loginTime)
+        print(device.ip, device.mac, device.login_time)
 ```
 
 ### 踢设备下线
@@ -135,7 +135,7 @@ with SelfServiceSystem("http://10.2.7.16:8080") as system:
     devices = system.get_online_devices()
 
     if devices:
-        system.kick_device(devices[0].sessionId)
+        system.kick_device(devices[0].session_id)
 ```
 
 ## 数据模型
@@ -145,6 +145,9 @@ with SelfServiceSystem("http://10.2.7.16:8080") as system:
 - `PortalInfo`：认证页地址、Portal 服务地址、用户 IP
 - `AuthResult`：Portal 认证结果
 - `OnlineDevice`：自助服务系统中的在线设备信息
+
+!!! note "字段命名"
+    `OnlineDevice` 使用 snake_case 字段名，例如 `login_time`、`session_id`。旧的 camelCase 属性仍可读取，但会触发 `DeprecationWarning`。
 
 ## 异步版本
 

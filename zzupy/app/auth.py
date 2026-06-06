@@ -120,7 +120,8 @@ class CASClient(ICASClient):
                 user_token_plain: dict = jwt.decode(
                     user_token, options={"verify_signature": False}
                 )
-                expire_date = datetime.fromtimestamp(user_token_plain.get("exp"))
+                exp = float(user_token_plain["exp"])
+                expire_date = datetime.fromtimestamp(exp)
                 now = datetime.now()
                 time_to_expire = (expire_date - now).total_seconds()
 
@@ -245,6 +246,7 @@ class CASClient(ICASClient):
             """确保统一认证客户端已获取 RSA 公钥。"""
             if self._cas._public_key is None:
                 self._cas._public_key = self._cas._get_public_key()
+            assert self._cas._public_key is not None
             return self._cas._public_key
 
         def _attest_url(self, path: str) -> str:
@@ -477,7 +479,7 @@ class CASClient(ICASClient):
 
         def send_sms(self) -> None:
             """[`request_sms_code()`][zzupy.app.auth.CASClient.MFAClient.request_sms_code] 的别名。"""
-            return self.request_sms_code()
+            self.request_sms_code()
 
         def verify_sms_code(self, code: str) -> str:
             """校验 MFA 短信验证码。
@@ -583,6 +585,8 @@ class CASClient(ICASClient):
         """
         if self._public_key is None:
             self._public_key = self._get_public_key()
+
+        assert self._public_key is not None
 
         if self.mfa.state:
             mfa_state_invalid = self.mfa.required and not self.mfa.verified

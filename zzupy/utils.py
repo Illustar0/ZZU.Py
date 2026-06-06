@@ -259,9 +259,9 @@ def require_auth(func):
             raise NotLoggedInError("需要登录")
         return func(self, *args, **kwargs)
 
-    import asyncio
+    import inspect
 
-    if asyncio.iscoroutinefunction(func):
+    if inspect.iscoroutinefunction(func):
         return async_wrapper
     else:
         return sync_wrapper
