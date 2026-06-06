@@ -556,17 +556,16 @@ class TeachingWeek(BaseModel):
 
             # 起始时间
             start_time = (
-                schedule.real_start_time.py_datetime()
-                or schedule.start_time.py_datetime()
+                schedule.real_start_time.to_stdlib() or schedule.start_time.to_stdlib()
             )
             end_time = (
-                schedule.real_end_time.py_datetime() or schedule.end_time.py_datetime()
+                schedule.real_end_time.to_stdlib() or schedule.end_time.to_stdlib()
             )
             event.add("dtstart", start_time)
             event.add("dtend", end_time)
 
             # 事件生成时间
-            event.add("dtstamp", Instant.now().py_datetime())
+            event.add("dtstamp", Instant.now().to_stdlib())
 
             # 事件 UID
             event.add("uid", f"{uuid.uuid4()}@schedule")
@@ -650,18 +649,17 @@ class TeachingWeeks(RootModel):
 
                 # 起始时间
                 start_time = (
-                    schedule.real_start_time.py_datetime()
-                    or schedule.start_time.py_datetime()
+                    schedule.real_start_time.to_stdlib()
+                    or schedule.start_time.to_stdlib()
                 )
                 end_time = (
-                    schedule.real_end_time.py_datetime()
-                    or schedule.end_time.py_datetime()
+                    schedule.real_end_time.to_stdlib() or schedule.end_time.to_stdlib()
                 )
                 event.add("dtstart", start_time)
                 event.add("dtend", end_time)
 
                 # 事件生成时间
-                event.add("dtstamp", Instant.now().py_datetime())
+                event.add("dtstamp", Instant.now().to_stdlib())
 
                 # 事件 UID
                 event.add("uid", f"{uuid.uuid4()}@schedule")
