@@ -477,7 +477,7 @@ class CASClient(ICASClient):
 
         def send_sms(self) -> None:
             """[`request_sms_code()`][zzupy.app.auth.CASClient.MFAClient.request_sms_code] 的别名。"""
-            return self.request_sms_code()
+            self.request_sms_code()
 
         def verify_sms_code(self, code: str) -> str:
             """校验 MFA 短信验证码。
