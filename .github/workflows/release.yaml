@@ -58,6 +58,6 @@ jobs:
           name: ${{ steps.version.outputs.tag }}
           body_path: ${{ runner.temp }}\release-notes.md
           files: |
-            dist/*  
-            !dist/.gitignore
+            dist/*.whl
+            dist/*.tar.gz
           fail_on_unmatched_files: true
