@@ -68,7 +68,8 @@ print(cas.refresh_token)
 ```
 
 接着前往[安全中心](https://authx-service.s.zzu.edu.cn/security-center/eqIP-management)，将设备 ID 显示为 `ZZU.Py` 的设备设置为可信设备。   
-理论上后续 `ZZU.Py` 就不会再被要求进行 MFA 验证。
+完成后，理论上后续 `ZZU.Py` 就不会再被要求进行 MFA 验证。  
+如果你有应用暂时无法升级至 `ZZU.Py >= 7.1.0`，你也可以用这种方法让它恢复运行。只需 `cas.set_device("")`，进行 MFA 验证并设置可信设备。
 
 #### 2. 抓包并使用常用设备的 deviceId 并将其添加为可信设备
 
