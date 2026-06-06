@@ -60,7 +60,7 @@ class PeriodInfo(BaseModel):
     require_theory: int | None
     """要求完成的理论学时数"""
     practice: None
-    practice_unit: str
+    practice_unit: str | None
     require_practice: None
     focus_practice: None
     focus_practice_unit: None
