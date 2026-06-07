@@ -15,7 +15,7 @@ from zzupy.web import EPortalClient, discover_portal_info
 
 portal = discover_portal_info()
 
-with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip) as client:
+with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip, force_bind=True) as client:
     result = client.auth("your_account", "your_password")
     print(result.success, result.message)
 ```
