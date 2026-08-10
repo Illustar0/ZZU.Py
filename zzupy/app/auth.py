@@ -15,6 +15,7 @@ from zzupy.exception import (
     LoginError,
     ParsingError,
     NetworkError,
+    NotLoggedInError,
     OperationError,
     MFAError,
 )
@@ -103,6 +104,13 @@ class CASClient(ICASClient):
     def logged_in(self) -> bool:
         """当前会话是否已登录"""
         return self._logged_in
+
+    def _require_user_token(self) -> str:
+        """返回当前 userToken，认证状态不完整时抛出异常。"""
+        user_token = self._user_token
+        if user_token is None:
+            raise NotLoggedInError("CASClient 缺少 userToken")
+        return user_token
 
     def _validate_jwt(self, pre_set_token: bool = False) -> bool:
         user_token = self._user_token
@@ -671,13 +679,14 @@ class CASClient(ICASClient):
             当前用户的个人信息
 
         Raises:
+            NotLoggedInError: 如果当前认证状态缺少 userToken。
             OperationError: 如果服务端返回失败结果。
             ParsingError: 如果响应解析失败。
             NetworkError: 如果网络请求失败。
         """
+        headers = {"X-Id-Token": self._require_user_token()}
         url = f"{self.PERSONAL_INFO_URL}"
         try:
-            headers = {"X-Id-Token": self._user_token}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
             log_http_response_body(
@@ -726,7 +735,6 @@ class CASClient(ICASClient):
 
         url = f"{self.PERSONAL_INFO_CARD_URL}"
         try:
-            headers = {"X-Id-Token": self._user_token}
             response = self._client.get(url, headers=headers)
             response.raise_for_status()
             log_http_response_body(
