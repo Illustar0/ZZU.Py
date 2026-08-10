@@ -1,16 +1,83 @@
 """工具函数库"""
 
+import base64
+import binascii
+from datetime import datetime
 import hashlib
+import json
 import re
 import socket
 from functools import wraps
 from html.parser import HTMLParser
-from typing import Dict
+from typing import Any, Dict
 from urllib.parse import parse_qs
 
 import gmalg
 
 from zzupy.exception import NotLoggedInError
+
+_MAX_JWT_LENGTH = 16_384
+
+
+def _decode_jwt_segment(segment: str) -> bytes:
+    """解码经过 Base64URL 编码的 JWT 片段。"""
+    padding = "=" * (-len(segment) % 4)
+    try:
+        return base64.b64decode(f"{segment}{padding}", altchars=b"-_", validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("JWT 包含无效的 Base64URL 片段") from exc
+
+
+def decode_jwt_payload(token: str) -> dict[str, Any]:
+    """在不验证签名的情况下解析 JWT payload。
+
+    该函数只用于读取 CAS Token 的过期时间，不应作为 Token 身份验证手段。
+
+    Args:
+        token: JWT 字符串。
+
+    Returns:
+        JWT payload。
+
+    Raises:
+        ValueError: 如果 Token 过长、结构无效或 JSON 内容不正确。
+    """
+    if not token or len(token) > _MAX_JWT_LENGTH:
+        raise ValueError("JWT 为空或超过长度限制")
+
+    segments = token.split(".")
+    if len(segments) != 3 or any(not segment for segment in segments):
+        raise ValueError("JWT 结构无效")
+
+    try:
+        header = json.loads(_decode_jwt_segment(segments[0]))
+        payload = json.loads(_decode_jwt_segment(segments[1]))
+        _decode_jwt_segment(segments[2])
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError("JWT 包含无效的 JSON") from exc
+
+    if not isinstance(header, dict) or not isinstance(payload, dict):
+        raise ValueError("JWT header 和 payload 必须为 JSON 对象")
+    return payload
+
+
+def get_jwt_expiration(token: str) -> datetime:
+    """读取 JWT 的过期时间。
+
+    Args:
+        token: JWT 字符串。
+
+    Returns:
+        JWT `exp` 对应的本地时间。
+
+    Raises:
+        ValueError: 如果 Token 无效或缺少有效的 `exp`。
+    """
+    payload = decode_jwt_payload(token)
+    try:
+        return datetime.fromtimestamp(float(payload["exp"]))
+    except (KeyError, TypeError, ValueError, OverflowError, OSError) as exc:
+        raise ValueError("JWT 缺少有效的 exp") from exc
 
 
 class _FirstHtmlAttributeParser(HTMLParser):

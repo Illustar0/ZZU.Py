@@ -85,7 +85,7 @@ with EPortalClient(portal.portal_server_url, bind_address=portal.user_ip, force_
 项目使用 `uv` 管理环境，常用命令：
 
 ```bash
-uv sync --locked --all-extras
+uv sync --all-extras
 uv run python scripts/generate_api_reference.py
 uv run zensical serve
 uv run zensical build

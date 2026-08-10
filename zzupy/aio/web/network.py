@@ -198,6 +198,7 @@ class EPortalClient:
             ParsingError: 如果无法解析 API 响应。
             NetworkError: 如果发生网络错误。
         """
+        params: list[tuple[str, str | int | float | None]]
         if encrypt:
             params = [
                 ("callback", self._xor_cipher.encrypt("dr1003")),

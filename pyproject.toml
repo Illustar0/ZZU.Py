@@ -8,13 +8,11 @@ license = "MIT"
 dynamic = ["version"]
 dependencies = [
     "gmalg>=1.0.6",
-    "httpx2>=2.3.0",
-    "icalendar>=7.1.2",
+    "httpx2>=2.0.0",
+    "icalendar>=7.0.1",
     "ifaddr>=0.2.0",
-    "loguru>=0.7.3",
-    "pydantic>=2.13.4",
-    "pyjwt>=2.13.0",
-    "typing-extensions>=4.12.2",
+    "loguru>=0.7.0",
+    "pydantic>=2.11.7",
     "whenever>=0.10.0",
 ]
 

@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Final
 
 import httpx2
-import jwt
 from pydantic import ValidationError
 
 from zzupy.aio.app.interfaces import ICASClient
@@ -16,12 +15,13 @@ from zzupy.exception import (
     LoginError,
     ParsingError,
     NetworkError,
+    NotLoggedInError,
     OperationError,
     MFAError,
 )
 from zzupy.logging import build_http_event_hooks, log_http_response_body, logger
 from zzupy.model.auth import PersonalInfo, PersonalInfoCardModel, PersonalInfoModel
-from zzupy.utils import require_auth
+from zzupy.utils import get_jwt_expiration, require_auth
 
 
 class CASClient(ICASClient):
@@ -42,8 +42,6 @@ class CASClient(ICASClient):
         "https://cas.s.zzu.edu.cn/token/mfa/initByType/securephone"
     )
     MFA_ATTEST_SERVER_URL: Final = "https://cas.s.zzu.edu.cn/attest/api/guard"
-
-    JWT_ALGORITHMS: Final = ["RS512"]
 
     def __init__(
         self,
@@ -109,6 +107,13 @@ class CASClient(ICASClient):
         """当前会话是否已登录"""
         return self._logged_in
 
+    def _require_user_token(self) -> str:
+        """返回当前 userToken，认证状态不完整时抛出异常。"""
+        user_token = self._user_token
+        if user_token is None:
+            raise NotLoggedInError("CASClient 缺少 userToken")
+        return user_token
+
     def _validate_jwt(self, pre_set_token: bool = False) -> bool:
         user_token = self._user_token
         refresh_token = self._refresh_token
@@ -119,59 +124,53 @@ class CASClient(ICASClient):
 
         if pre_set_token:
             try:
-                user_token_plain: dict = jwt.decode(
-                    user_token, options={"verify_signature": False}
-                )
-                exp = float(user_token_plain["exp"])
-                expire_date = datetime.fromtimestamp(exp)
-                now = datetime.now()
-                time_to_expire = (expire_date - now).total_seconds()
-
-                if time_to_expire <= 900:  # 提前 15 分钟
-                    logger.error(
-                        "userToken 即将过期或已过期，将使用账密登录并更新 userToken"
-                    )
-                    return False
-
-                # 在过期前 15 分钟自动刷新
-                refresh_delay = time_to_expire - 900
-                if refresh_delay > 0:
-
-                    async def refresh_task():
-                        await asyncio.sleep(refresh_delay)
-                        await self.login(force_login=True)
-
-                    self._refresh_task = asyncio.create_task(refresh_task())
-                    logger.debug(
-                        f"已设置自动刷新任务，将在 {refresh_delay:.0f} 秒后刷新 Token"
-                    )
-
-            except jwt.InvalidTokenError:
+                user_expiration = get_jwt_expiration(user_token)
+            except ValueError:
                 logger.error("userToken 无效，将使用账密登录并更新 userToken")
                 return False
 
             try:
-                jwt.decode(refresh_token, options={"verify_signature": False})
-            except jwt.ExpiredSignatureError:
-                logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
-                return False
-            except jwt.InvalidTokenError:
+                refresh_expiration = get_jwt_expiration(refresh_token)
+            except ValueError:
                 logger.error("refreshToken 无效，将使用账密登录并更新 refreshToken")
                 return False
+
+            now = datetime.now()
+            if refresh_expiration <= now:
+                logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
+                return False
+
+            time_to_expire = (user_expiration - now).total_seconds()
+            if time_to_expire <= 900:  # 提前 15 分钟
+                logger.error(
+                    "userToken 即将过期或已过期，将使用账密登录并更新 userToken"
+                )
+                return False
+
+            refresh_delay = time_to_expire - 900
+
+            async def refresh_task():
+                await asyncio.sleep(refresh_delay)
+                await self.login(force_login=True)
+
+            if self._refresh_task is not None:
+                self._refresh_task.cancel()
+            self._refresh_task = asyncio.create_task(refresh_task())
+            logger.debug(f"已设置自动刷新任务，将在 {refresh_delay:.0f} 秒后刷新 Token")
         else:
             try:
-                jwt.decode(user_token, options={"verify_signature": False})
-            except jwt.InvalidTokenError:
+                get_jwt_expiration(user_token)
+            except ValueError as exc:
                 raise LoginError(
                     "登录失败，下发的 userToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
-                )
+                ) from exc
 
             try:
-                jwt.decode(refresh_token, options={"verify_signature": False})
-            except jwt.InvalidTokenError:
+                get_jwt_expiration(refresh_token)
+            except ValueError as exc:
                 raise LoginError(
                     "登录失败，下发的 refreshToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
-                )
+                ) from exc
 
         logger.info("userToken 和 refreshToken 有效")
         return True
@@ -578,32 +577,30 @@ class CASClient(ICASClient):
             force_login: 强制使用账密登录
 
         Raises:
+            MFAError: 如果当前登录需要 MFA 但尚未完成验证。
             LoginError: 如果登录失败。
             ParsingError: 如果服务器响应无法解析。
             NetworkError: 如果出现网络错误。
         """
+        if not force_login:
+            if self._user_token is None or self._refresh_token is None:
+                logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
+            elif self._validate_jwt(True):
+                logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
+                self._logged_in = True
+                return
+        else:
+            logger.info("强制使用账密登录")
+
         if self._public_key is None:
             self._public_key = await self._get_public_key()
 
         assert self._public_key is not None
 
-        if self.mfa.state:
-            mfa_state_invalid = self.mfa.required and not self.mfa.verified
-        else:
-            mfa_state_invalid = not await self.mfa.is_required()
-        if mfa_state_invalid:
-            raise MFAError("MFA 状态错误，当前会话可能需要 MFA 验证")
-
-        if not force_login:
-            if self._user_token is None or self._refresh_token is None:
-                logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
-            else:
-                if self._validate_jwt(True):
-                    logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
-                    self._logged_in = True
-                    return
-        else:
-            logger.info("强制使用账密登录")
+        if not self.mfa.state:
+            await self.mfa.is_required()
+        if self.mfa.required and not self.mfa.verified:
+            raise MFAError("当前登录需要完成 MFA 验证")
 
         encrypted_account = self._encrypt_and_encode(self._account, self._public_key)
         encrypted_password = self._encrypt_and_encode(self._password, self._public_key)
@@ -681,13 +678,14 @@ class CASClient(ICASClient):
             当前用户的个人信息
 
         Raises:
+            NotLoggedInError: 如果当前认证状态缺少 userToken。
             OperationError: 如果服务端返回失败结果。
             ParsingError: 如果响应解析失败。
             NetworkError: 如果网络请求失败。
         """
+        headers = {"X-Id-Token": self._require_user_token()}
         url = f"{self.PERSONAL_INFO_URL}"
         try:
-            headers = {"X-Id-Token": self._user_token}
             response = await self._client.get(url, headers=headers)
             response.raise_for_status()
             log_http_response_body(
@@ -736,7 +734,6 @@ class CASClient(ICASClient):
 
         url = f"{self.PERSONAL_INFO_CARD_URL}"
         try:
-            headers = {"X-Id-Token": self._user_token}
             response = await self._client.get(url, headers=headers)
             response.raise_for_status()
             log_http_response_body(
