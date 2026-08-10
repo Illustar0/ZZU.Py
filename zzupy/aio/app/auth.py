@@ -574,6 +574,16 @@ class CASClient(ICASClient):
             ParsingError: 如果服务器响应无法解析。
             NetworkError: 如果出现网络错误。
         """
+        if not force_login:
+            if self._user_token is None or self._refresh_token is None:
+                logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
+            elif self._validate_jwt(True):
+                logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
+                self._logged_in = True
+                return
+        else:
+            logger.info("强制使用账密登录")
+
         if self._public_key is None:
             self._public_key = await self._get_public_key()
 
@@ -583,17 +593,6 @@ class CASClient(ICASClient):
             await self.mfa.is_required()
         if self.mfa.required and not self.mfa.verified:
             raise MFAError("当前登录需要完成 MFA 验证")
-
-        if not force_login:
-            if self._user_token is None or self._refresh_token is None:
-                logger.debug("userToken 或 refreshToken 不存在，使用账密登录")
-            else:
-                if self._validate_jwt(True):
-                    logger.debug("userToken 和 refreshToken 已设置且有效，跳过账密登录")
-                    self._logged_in = True
-                    return
-        else:
-            logger.info("强制使用账密登录")
 
         encrypted_account = self._encrypt_and_encode(self._account, self._public_key)
         encrypted_password = self._encrypt_and_encode(self._password, self._public_key)
