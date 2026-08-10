@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Final
 
 import httpx2
-import jwt
 from pydantic import ValidationError
 
 from zzupy.app.interfaces import ICASClient
@@ -21,7 +20,7 @@ from zzupy.exception import (
 )
 from zzupy.logging import build_http_event_hooks, log_http_response_body, logger
 from zzupy.model.auth import PersonalInfo, PersonalInfoModel, PersonalInfoCardModel
-from zzupy.utils import require_auth
+from zzupy.utils import get_jwt_expiration, require_auth
 
 
 class CASClient(ICASClient):
@@ -42,8 +41,6 @@ class CASClient(ICASClient):
         "https://cas.s.zzu.edu.cn/token/mfa/initByType/securephone"
     )
     MFA_ATTEST_SERVER_URL: Final = "https://cas.s.zzu.edu.cn/attest/api/guard"
-
-    JWT_ALGORITHMS: Final = ["RS512"]
 
     def __init__(
         self,
@@ -117,60 +114,56 @@ class CASClient(ICASClient):
 
         if pre_set_token:
             try:
-                user_token_plain: dict = jwt.decode(
-                    user_token, options={"verify_signature": False}
-                )
-                exp = float(user_token_plain["exp"])
-                expire_date = datetime.fromtimestamp(exp)
-                now = datetime.now()
-                time_to_expire = (expire_date - now).total_seconds()
-
-                if time_to_expire <= 900:  # 提前 15 分钟
-                    logger.error(
-                        "userToken 即将过期或已过期，将使用账密登录并更新 userToken"
-                    )
-                    return False
-
-                # 在过期前 15 分钟自动刷新
-                refresh_delay = time_to_expire - 900
-                if refresh_delay > 0:
-                    self._refresh_timer = threading.Timer(
-                        refresh_delay,
-                        self.login,
-                        kwargs={"force_login": True},
-                    )
-                    self._refresh_timer.daemon = True
-                    self._refresh_timer.start()
-                    logger.debug(
-                        f"已设置自动刷新定时器，将在 {refresh_delay:.0f} 秒后刷新 Token"
-                    )
-
-            except jwt.InvalidTokenError:
+                user_expiration = get_jwt_expiration(user_token)
+            except ValueError:
                 logger.error("userToken 无效，将使用账密登录并更新 userToken")
                 return False
 
             try:
-                jwt.decode(refresh_token, options={"verify_signature": False})
-            except jwt.ExpiredSignatureError:
-                logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
-                return False
-            except jwt.InvalidTokenError:
+                refresh_expiration = get_jwt_expiration(refresh_token)
+            except ValueError:
                 logger.error("refreshToken 无效，将使用账密登录并更新 refreshToken")
                 return False
+
+            now = datetime.now()
+            if refresh_expiration <= now:
+                logger.error("refreshToken 已过期，将使用账密登录并更新 refreshToken")
+                return False
+
+            time_to_expire = (user_expiration - now).total_seconds()
+            if time_to_expire <= 900:  # 提前 15 分钟
+                logger.error(
+                    "userToken 即将过期或已过期，将使用账密登录并更新 userToken"
+                )
+                return False
+
+            refresh_delay = time_to_expire - 900
+            if self._refresh_timer is not None:
+                self._refresh_timer.cancel()
+            self._refresh_timer = threading.Timer(
+                refresh_delay,
+                self.login,
+                kwargs={"force_login": True},
+            )
+            self._refresh_timer.daemon = True
+            self._refresh_timer.start()
+            logger.debug(
+                f"已设置自动刷新定时器，将在 {refresh_delay:.0f} 秒后刷新 Token"
+            )
         else:
             try:
-                jwt.decode(user_token, options={"verify_signature": False})
-            except jwt.InvalidTokenError:
+                get_jwt_expiration(user_token)
+            except ValueError as exc:
                 raise LoginError(
                     "登录失败，下发的 userToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
-                )
+                ) from exc
 
             try:
-                jwt.decode(refresh_token, options={"verify_signature": False})
-            except jwt.InvalidTokenError:
+                get_jwt_expiration(refresh_token)
+            except ValueError as exc:
                 raise LoginError(
                     "登录失败，下发的 refreshToken 无效。这是意料之外的行为，请前往 Issue 报告此错误。"
-                )
+                ) from exc
 
         logger.info("userToken 和 refreshToken 有效")
         return True
