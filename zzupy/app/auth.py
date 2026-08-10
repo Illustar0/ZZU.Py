@@ -572,6 +572,7 @@ class CASClient(ICASClient):
             force_login: 强制使用账密登录
 
         Raises:
+            MFAError: 如果当前登录需要 MFA 但尚未完成验证。
             LoginError: 如果登录失败。
             ParsingError: 如果服务器响应无法解析。
             NetworkError: 如果出现网络错误。
@@ -581,12 +582,10 @@ class CASClient(ICASClient):
 
         assert self._public_key is not None
 
-        if self.mfa.state:
-            mfa_state_invalid = self.mfa.required and not self.mfa.verified
-        else:
-            mfa_state_invalid = not self.mfa.is_required()
-        if mfa_state_invalid:
-            raise MFAError("MFA 状态错误，当前会话可能需要 MFA 验证")
+        if not self.mfa.state:
+            self.mfa.is_required()
+        if self.mfa.required and not self.mfa.verified:
+            raise MFAError("当前登录需要完成 MFA 验证")
 
         if not force_login:
             if self._user_token is None or self._refresh_token is None:
